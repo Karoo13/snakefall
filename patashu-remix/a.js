@@ -1,9 +1,6 @@
 function unreachable() { return new Error("unreachable"); }
 if (typeof VERSION === "undefined") {
-  let versionSpan = document.getElementById("versionSpan");
-  if (versionSpan) {
-    versionSpan.innerHTML = "p.1.1";
-  }
+  document.getElementById("versionSpan").innerHTML = "p.1.2";
 }
 var canvas = document.getElementById("canvas");
 
@@ -54,30 +51,32 @@ function loadLevel(newLevel) {
 
 var magicNumber_v0 = "3tFRIoTU";
 var magicNumber    = "HyRr4JK1";
-var exampleLevel = magicNumber_v0 + "&" +
+var exampleLevel = magicNumber + "&" +
   "17&31" +
   "?" +
     "0000000000000000000000000000000" +
     "0000000000000000000000000000000" +
     "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000040000000000" +
-    "0000000000000110000000000000000" +
+    "0000000000000000000000000004000" +
+    "00000000000ddd00000000000000000" +
+    "00000uuuuuu00000000000000000000" +
+    "00000000000000000000000o0000000" +
+    "00000000000001100000000o0000000" +
     "0000000000000111100000000000000" +
     "0000000000000011000000000000000" +
-    "0000000000000010000010000000000" +
-    "0000000000000010100011000000000" +
-    "0000001111111000110000000110000" +
-    "0000011111111111111111111110000" +
-    "0000011111111101111111111100000" +
-    "0000001111111100111111111100000" +
-    "0000001111111000111111111100000" +
+    "000000000000001t000010000000000" +
+    "0000000000000t1t100011000000000" +
+    "0000001111111ttt110000010000000" +
+    "000001111111111111111111ff00000" +
+    "000001111111110111111111ff00000" +
+    "000000111111110011111111f000000" +
+    "0000001111111000111111111000000" +
   "/" +
-  "s0 ?351&350&349/" +
-  "f0 ?328/" +
-  "f1 ?366/";
+  "b0 ?396&397/" +
+  "s4 ?351&350&349/" +
+  "f2 ?163/" +
+  "f1 ?430/" +
+  "f0 ?328/";
 
 var testLevel_v0 = "3tFRIoTU&5&5?0005*00300024005*001000/b0?7&6&15&23/s3?18/s0?1&0&5/s1?2/s4?10/s2?17/b2?9/b3?14/b4?19/b1?4&20/b5?24/";
 var testLevel_v0_converted = "HyRr4JK1&5&5?0005*4024005*001000/b0?7&6&15&23/s3?18/s0?1&0&5/s1?2/s4?10/s2?17/b2?9/b3?14/b4?19/b1?4&20/b5?24/f0?8/";
@@ -373,6 +372,7 @@ function saveReplay() {
   if (dirtyState === REPLAY_DIRTY) {
     // there is a replay to save
     hash += "#replay=" + compressSerialization(stringifyReplay());
+    saveProgressButton.textContent = "Progress Saved";
   }
   expectHash = hash;
   location.hash = hash;
@@ -456,7 +456,7 @@ document.addEventListener("keydown", function(event) {
       if (modifierMask === 0)     { undo(unmoveStuff); break; }
       if (modifierMask === SHIFT) { redo(unmoveStuff); break; }
       if ( persistentState.showEditor && modifierMask === CTRL)        { undo(uneditStuff); break; }
-      if ( persistentState.showEditor && modifierMask === CTRL|SHIFT)  { redo(uneditStuff); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL+SHIFT)  { redo(uneditStuff); break; }
       return;
     case "KeyY":
       if (modifierMask === 0)     { redo(unmoveStuff); break; }
@@ -478,14 +478,16 @@ document.addEventListener("keydown", function(event) {
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(WALL); break; }
       return;
     case "KeyA":
-      if (!persistentState.showEditor && modifierMask === 0)    { move(0, -1); break; }
-      if ( persistentState.showEditor && modifierMask === CTRL) { selectAll(); break; }
+      if (!persistentState.showEditor && modifierMask === 0)     { move(0, -1); break; }
+      if ( persistentState.showEditor && modifierMask === 0)     { setPaintBrushTileCode("resizeU"); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode("resizeD"); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL)  { selectAll(); break; }
       return;
     case "KeyS":
       if (!persistentState.showEditor && modifierMask === 0)     { move(1, 0); break; }
       if ( persistentState.showEditor && modifierMask === 0)     { setPaintBrushTileCode(SPIKE); break; }
       if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode("select"); break; }
-      if ( persistentState.showEditor && modifierMask === CTRL|SHIFT) { saveLevel(); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL+SHIFT) { saveLevel(); break; }
       if (modifierMask === CTRL) { saveReplay(); break; }
       return;
     case "KeyD":
@@ -647,7 +649,8 @@ var resizeDragAnchorRowcol = null;
 var clipboardData = null;
 var clipboardOffsetRowcol = null;
 var paintButtonIdAndTileCodes = [
-  ["resizeButton", "resize"],
+  ["resizeUButton", "resizeU"],
+  ["resizeDButton", "resizeD"],
   ["selectButton", "select"],
   ["pasteButton", "paste"],
   ["paintSpaceButton", SPACE],
@@ -730,7 +733,8 @@ canvas.addEventListener("mousedown", function(event) {
     // editor tool
     lastDraggingRowcol = getRowcol(level, location);
     if (paintBrushTileCode === "select") selectionStart = location;
-    if (paintBrushTileCode === "resize") resizeDragAnchorRowcol = lastDraggingRowcol;
+    if (paintBrushTileCode === "resizeU") resizeDragAnchorRowcol = lastDraggingRowcol;
+    if (paintBrushTileCode === "resizeD") resizeDragAnchorRowcol = lastDraggingRowcol;
     draggingChangeLog = [];
     paintAtLocation(location, draggingChangeLog);
   } else {
@@ -781,11 +785,17 @@ function stopDragging() {
     draggingChangeLog = null;
   }
 }
+function clampRowcol(rowcol) {
+  rowcol.r = clamp(rowcol.r, 0, level.height - 1);
+  rowcol.c = clamp(rowcol.c, 0, level.width - 1);
+  return rowcol;
+}
 canvas.addEventListener("mousemove", function(event) {
   if (!persistentState.showEditor) return;
   var location = getLocationFromEvent(event);
   var mouseRowcol = getRowcol(level, location);
   if (lastDraggingRowcol != null) {
+    clampRowcol(lastDraggingRowcol);
     // Dragging Force - Through the Fruit and Flames
     var lastDraggingLocation = getLocation(level, lastDraggingRowcol.r, lastDraggingRowcol.c);
     // we need to get rowcols for everything before we start dragging, because dragging might resize the world.
@@ -793,6 +803,7 @@ canvas.addEventListener("mousemove", function(event) {
       return getRowcol(level, location);
     });
     path.forEach(function(rowcol) {
+      clampRowcol(rowcol);
       // convert to location at the last minute in case each of these steps is changing the coordinate system.
       paintAtLocation(getLocation(level, rowcol.r, rowcol.c), draggingChangeLog);
     });
@@ -818,8 +829,8 @@ function getLocationFromEvent(event) {
   var c = Math.floor(eventToMouseX(event, canvas) / tileSize);
   // since the canvas is centered, the bounding client rect can be half-pixel aligned,
   // resulting in slightly out-of-bounds mouse events.
-  r = clamp(r, 0, level.height);
-  c = clamp(c, 0, level.width);
+  r = clamp(r, 0, level.height - 1);
+  c = clamp(c, 0, level.width - 1);
   return getLocation(level, r, c);
 }
 function eventToMouseX(event, canvas) { return event.clientX - canvas.getBoundingClientRect().left; }
@@ -1037,6 +1048,34 @@ function setHeight(newHeight, changeLog) {
   changeLog.push(["h", level.height, newHeight]);
   level.height = newHeight;
 }
+function setTop(newHeight, changeLog) {
+  if (newHeight < level.height) {
+    // crop
+    for (var r = 0; r < level.height - newHeight; r++) {
+      for (var c = 0; c < level.width; c++) {
+        var location = getLocation(level, r, c);
+        removeAnyObjectAtLocation(location, changeLog);
+        // also delete non-space tiles
+        paintTileAtLocation(location, SPACE, changeLog);
+      }
+    }
+    level.map.splice(0, (level.height - newHeight) * level.width);
+  } else {
+    // expand
+    for (var r = level.height; r < newHeight; r++) {
+      for (var c = 0; c < level.width; c++) {
+        // inefficient
+        level.map.splice(0, 0, SPACE);
+      }
+    }
+  }
+  var transformLocation = function(location) {return location + (newHeight - level.height) * level.width};
+  level.objects.forEach(function(object) {
+    object.locations = object.locations.map(transformLocation);
+  });
+  changeLog.push(["t", level.height, newHeight]);
+  level.height = newHeight;
+}
 function setWidth(newWidth, changeLog) {
   if (newWidth < level.width) {
     // crop
@@ -1058,13 +1097,41 @@ function setWidth(newWidth, changeLog) {
       }
     }
   }
-
-  var transformLocation = makeScaleCoordinatesFunction(level.width, newWidth);
+  var transformLocation = makeScaleCoordinatesFunction(level.width, newWidth, 0);
   level.objects.forEach(function(object) {
     object.locations = object.locations.map(transformLocation);
   });
-
   changeLog.push(["w", level.width, newWidth]);
+  level.width = newWidth;
+}
+function setLeft(newWidth, changeLog) {
+  if (newWidth < level.width) {
+    // crop
+    for (var r = level.height - 1; r >= 0; r--) {
+      for (var c = level.width - 1 - newWidth; c >= 0; c--) {
+        var location = getLocation(level, r, c);
+        removeAnyObjectAtLocation(location, changeLog);
+        paintTileAtLocation(location, SPACE, changeLog);
+        level.map.splice(location, 1);
+      }
+    }
+  } else {
+    // expand
+    for (var r = level.height - 1; r >= 0; r--) {
+      var insertionPoint = level.width * r;
+      for (var c = level.width; c < newWidth; c++) {
+        // boy is this inefficient. ... YOLO!
+        level.map.splice(insertionPoint, 0, SPACE);
+      }
+    }
+  }
+  var offset = newWidth - level.width;
+  var transformLocation = makeScaleCoordinatesFunction(level.width, newWidth, offset);
+  level.objects.forEach(function(object) {
+    object.locations = object.locations.map(transformLocation);
+  });
+  if (resizeDragAnchorRowcol) resizeDragAnchorRowcol.c += offset;
+  changeLog.push(["l", level.width, newWidth]);
   level.width = newWidth;
 }
 
@@ -1108,16 +1175,29 @@ function newFruit(location) {
   };
 }
 function paintAtLocation(location, changeLog) {
-  if (typeof paintBrushTileCode === "number") {
+  if (isDead()){
+    // can't edit while dead
+  } else  if (typeof paintBrushTileCode === "number") {
     removeAnyObjectAtLocation(location, changeLog);
     paintTileAtLocation(location, paintBrushTileCode, changeLog);
-  } else if (paintBrushTileCode === "resize") {
+  } else if (paintBrushTileCode === "resizeU") {
     var toRowcol = getRowcol(level, location);
     var dr = toRowcol.r - resizeDragAnchorRowcol.r;
     var dc = toRowcol.c - resizeDragAnchorRowcol.c;
     resizeDragAnchorRowcol = toRowcol;
-    if (dr !== 0) setHeight(level.height + dr, changeLog);
-    if (dc !== 0) setWidth(level.width + dc, changeLog);
+    if (dr < 0) setTop(level.height - dr, changeLog);
+    if (dc < 0) setLeft(level.width - dc, changeLog);
+    if (dr > 0) setHeight(level.height + dr, changeLog);
+    if (dc > 0) setWidth(level.width + dc, changeLog);
+  } else if (paintBrushTileCode === "resizeD") {
+    var toRowcol = getRowcol(level, location);
+    var dr = toRowcol.r - resizeDragAnchorRowcol.r;
+    var dc = toRowcol.c - resizeDragAnchorRowcol.c;
+    resizeDragAnchorRowcol = toRowcol;
+    if (dr > 0) setTop(Math.max(level.height - dr, 2), changeLog);
+    if (dc > 0) setLeft(Math.max(level.width - dc, 2), changeLog);
+    if (dr < 0) setHeight(Math.max(level.height + dr, 2), changeLog);
+    if (dc < 0) setWidth(Math.max(level.width + dc, 2), changeLog);
   } else if (paintBrushTileCode === "select") {
     selectionEnd = location;
   } else if (paintBrushTileCode === "paste") {
@@ -1154,7 +1234,9 @@ function paintAtLocation(location, changeLog) {
     }
 
     // make sure there's space behind us
-    paintTileAtLocation(location, SPACE, changeLog);
+    if (!isTileCodeCoverable(level.map[location])) {
+      paintTileAtLocation(location, SPACE, changeLog);
+    }
     removeAnyObjectAtLocation(location, changeLog);
     if (paintBrushObject == null) {
       var thereWereNoSnakes = countSnakes() === 0;
@@ -1174,7 +1256,9 @@ function paintAtLocation(location, changeLog) {
     } else {
       // make a change
       // make sure there's space behind us
-      paintTileAtLocation(location, SPACE, changeLog);
+      if (!isTileCodeCoverable(level.map[location])) {
+        paintTileAtLocation(location, SPACE, changeLog);
+      }
       var thisBlock = null;
       if (paintBrushBlockId != null) {
         thisBlock = findBlockById(paintBrushBlockId);
@@ -1207,7 +1291,10 @@ function paintAtLocation(location, changeLog) {
       delete blockSupportRenderCache[thisBlock.id];
     }
   } else if (paintBrushTileCode === FRUIT) {
-    paintTileAtLocation(location, SPACE, changeLog);
+    // fruit covers other coverable tiles too much, can be achieved manually
+    if (!isTileCodePlatform(level.map[location])) {
+      paintTileAtLocation(location, SPACE, changeLog);
+    }
     removeAnyObjectAtLocation(location, changeLog);
     var object = newFruit(location)
     level.objects.push(object);
@@ -1235,6 +1322,8 @@ function pushUndo(undoStuff, changeLog) {
   //   ["s", 1, [false, [11,12]], [true, [12,13]]],  // snake id 1 moved from alive at [11, 12] to dead at [12, 13]
   //   ["b", 1, [false, [20,30]], [false, []]],      // block id 1 was deleted from location [20, 30]
   //   ["f", 0, [false, [40]], [false, []]],         // fruit id 0 was deleted from location [40]
+  //   ["t", 25, 10],                                // height changed from 25 to 10 from the top, shifting all tiles and objects.
+  //   ["l", 8, 10],                                 // width changed from 8 to 10 from the left, shifting all tiles and objects.
   //   ["h", 25, 10],                                // height changed from 25 to 10. all cropped tiles are guaranteed to be SPACE.
   //   ["w", 8, 10],                                 // width changed from 8 to 10. a change in the coordinate system.
   //   ["m", 23, 2, 0],                              // map at location 23 changed from 2 to 0 in the new coordinate system.
@@ -1256,6 +1345,42 @@ function reduceChangeLog(changeLog) {
     var change = changeLog[i];
     if (change[0] === "i") {
       continue; // don't reduce player input
+    } else if (change[0] === "t") {
+      for (var j = i + 1; j < changeLog.length; j++) {
+        var otherChange = changeLog[j];
+        if (otherChange[0] === "t") {
+          // combine
+          change[2] = otherChange[2];
+          changeLog.splice(j, 1);
+          j--;
+          continue;
+        } else if (otherChange[0] === "w" || otherChange[0] === "l") {
+          continue; // no interaction between top and height
+        } else break; // no more reduction possible
+      }
+      if (change[1] === change[2]) {
+        // no change
+        changeLog.splice(i, 1);
+        i--;
+      }
+    } else if (change[0] === "l") {
+      for (var j = i + 1; j < changeLog.length; j++) {
+        var otherChange = changeLog[j];
+        if (otherChange[0] === "l") {
+          // combine
+          change[2] = otherChange[2];
+          changeLog.splice(j, 1);
+          j--;
+          continue;
+        } else if (otherChange[0] === "h" || otherChange[0] === "t") {
+          continue; // no interaction between left and width
+        } else break; // no more reduction possible
+      }
+      if (change[1] === change[2]) {
+        // no change
+        changeLog.splice(i, 1);
+        i--;
+      }
     } else if (change[0] === "h") {
       for (var j = i + 1; j < changeLog.length; j++) {
         var otherChange = changeLog[j];
@@ -1265,8 +1390,8 @@ function reduceChangeLog(changeLog) {
           changeLog.splice(j, 1);
           j--;
           continue;
-        } else if (otherChange[0] === "w") {
-          continue; // no interaction between height and width
+        } else if (otherChange[0] === "w" || otherChange[0] === "l") {
+          continue; // no interaction between height and top
         } else break; // no more reduction possible
       }
       if (change[1] === change[2]) {
@@ -1283,8 +1408,8 @@ function reduceChangeLog(changeLog) {
           changeLog.splice(j, 1);
           j--;
           continue;
-        } else if (otherChange[0] === "h") {
-          continue; // no interaction between height and width
+        } else if (otherChange[0] === "h" || otherChange[0] === "t") {
+          continue; // no interaction between width and left
         } else break; // no more reduction possible
       }
       if (change[1] === change[2]) {
@@ -1300,8 +1425,8 @@ function reduceChangeLog(changeLog) {
           change[3] = otherChange[3];
           changeLog.splice(j, 1);
           j--;
-        } else if (otherChange[0] === "w" || otherChange[0] === "h") {
-          break; // can't reduce accros resizes
+        } else if (otherChange[0] === "w" || otherChange[0] === "h" || otherChange[0] === "l" || otherChange[0] === "t") {
+          break; // can't reduce across resizes
         }
       }
       if (change[2] === change[3]) {
@@ -1317,8 +1442,8 @@ function reduceChangeLog(changeLog) {
           change[3] = otherChange[3];
           changeLog.splice(j, 1);
           j--;
-        } else if (otherChange[0] === "w" || otherChange[0] === "h") {
-          break; // can't reduce accros resizes
+        } else if (otherChange[0] === "w" || otherChange[0] === "h" || otherChange[0] === "l" || otherChange[0] === "t") {
+          break; // can't reduce across resizes
         }
       }
       if (deepEquals(change[2], change[3])) {
@@ -1392,7 +1517,7 @@ function redoOneFrame(undoStuff) {
 }
 function undoChanges(changes, changeLog) {
   var widthContext = changes.pop();
-  var transformLocation = widthContext === level.width ? identityFunction : makeScaleCoordinatesFunction(widthContext, level.width);
+  var transformLocation = widthContext === level.width ? identityFunction : makeScaleCoordinatesFunction(widthContext, level.width, 0);
   for (var i = changes.length - 1; i >= 0; i--) {
     var paradoxDescription = undoChange(changes[i]);
     if (paradoxDescription != null) paradoxes.push(paradoxDescription);
@@ -1413,6 +1538,18 @@ function undoChanges(changes, changeLog) {
       // no state change, but preserve the intention.
       changeLog.push(change);
       return null;
+    } else if (change[0] === "t") {
+      // change height from top
+      var fromHeight = change[1];
+      var   toHeight = change[2];
+      if (level.height !== toHeight) return "Impossible";
+      setTop(fromHeight, changeLog);
+    } else if (change[0] === "l") {
+      // change width from left
+      var fromWidth = change[1];
+      var   toWidth = change[2];
+      if (level.width !== toWidth) return "Impossible";
+      setLeft(fromWidth, changeLog);
     } else if (change[0] === "h") {
       // change height
       var fromHeight = change[1];
@@ -2013,6 +2150,13 @@ function isTileCodePlatform(tileCode) {
     default: return false;
   }
 }
+function isTileCodeCoverable(tileCode) {
+  switch (tileCode)
+  {
+    case SPACE: case EXIT: case PORTAL: case PLATFORM: case PLATFORMU: case PLATFORMD: case PLATFORML: case PLATFORMR: case WOODPLATFORM: case OPENGATE: return true;
+    default: return false;
+  }
+}
 
 function addIfNotPresent(array, element) {
   if (array.indexOf(element) !== -1) return;
@@ -2136,8 +2280,9 @@ var snakeColors = [
   "#80f",
   "#f80",
 ];
-var blockForeground = ["#de5a6d","#fa65dd","#c367e3","#9c62fa","#625ff0"];
-var blockBackground = ["#853641","#963c84","#753d88","#5d3a96","#3a3990"];
+var blockForeground = ["#de5a6d","#fa65dd","#c367e3","#9c62fa","#625ff0","#79c13a","#ccbf4b","#e08645"];
+var blockBackground = ["#853641","#963c84","#753d88","#5d3a96","#3a3990","#436b21","#756c2b","#8c532b"];
+
 
 var activeSnakeId = null;
 
@@ -2335,13 +2480,17 @@ function render() {
     // banners
     if (countSnakes() === 0) {
       context.fillStyle = "#ff0";
-      context.font = "100px Arial";
-      context.fillText("You Win!", 0, canvas.height / 2);
+      context.textBaseline = "middle";
+      context.textAlign = "center";
+      context.font = 64 * (Math.sqrt(canvas.width / 64 + 4) - 2) + "px Arial";
+      context.fillText("You Win!", canvas.width / 2, canvas.height / 2);
     }
-    if (isDead()) {
+    else if (isDead()) {
       context.fillStyle = "#f00";
-      context.font = "100px Arial";
-      context.fillText("You Dead!", 0, canvas.height / 2);
+      context.textBaseline = "middle";
+      context.textAlign = "center";
+      context.font = 64 * (Math.sqrt(canvas.width / 64 + 4) - 2) + "px Arial";
+      context.fillText("You Dead!", canvas.width / 2, canvas.height / 2);
     }
 
     // editor hover
@@ -2379,7 +2528,9 @@ function render() {
         if (!(objectHere != null && objectHere.type === FRUIT)) {
           drawObject(newFruit(hoverLocation));
         }
-      } else if (paintBrushTileCode === "resize") {
+      } else if (paintBrushTileCode === "resizeU") {
+        void 0; // do nothing
+      } else if (paintBrushTileCode === "resizeD") {
         void 0; // do nothing
       } else if (paintBrushTileCode === "select") {
         void 0; // do nothing
@@ -2765,7 +2916,7 @@ function render() {
     }
     context.fill();
   }
-  function drawConnector(r1, c1, r2, c2, color) {
+  function drawConnector(context, r1, c1, r2, c2, color) {
     // either r1 and r2 or c1 and c2 must be equal
     if (r1 > r2 || c1 > c2) {
       var rTmp = r1;
@@ -3009,9 +3160,9 @@ function getSetSubtract(array1, array2) {
   if (array1.length === 0) return [];
   return array1.filter(function(x) { return array2.indexOf(x) == -1; });
 }
-function makeScaleCoordinatesFunction(width1, width2) {
+function makeScaleCoordinatesFunction(width1, width2, offset) {
   return function(location) {
-    return location + (width2 - width1) * Math.floor(location / width1);
+    return location + (width2 - width1) * Math.floor(location / width1) + offset;
   };
 }
 
