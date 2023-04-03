@@ -1,7 +1,9 @@
 function unreachable() { return new Error("unreachable"); }
-if (typeof VERSION !== "undefined") {
-  document.getElementById("versionSpan").innerHTML =
-    '<a href="https://github.com/thejoshwolfe/snakefall/blob/' + VERSION.sha1 + '/README.md">' + VERSION.tag + '</a>';
+if (typeof VERSION === "undefined") {
+  let versionSpan = document.getElementById("versionSpan");
+  if (versionSpan) {
+    versionSpan.innerHTML = "v.1.0";
+  }
 }
 var canvas = document.getElementById("canvas");
 
@@ -415,127 +417,117 @@ document.addEventListener("keydown", function(event) {
     (event.ctrlKey ? CTRL : 0) |
     (event.altKey ? ALT : 0)
   );
-  switch (event.keyCode) {
-    case 37: // left
+  switch (event.code) {
+    case "ArrowLeft":
       if (modifierMask === 0) { move(0, -1); break; }
       return;
-    case 38: // up
+    case "ArrowUp":
       if (modifierMask === 0) { move(-1, 0); break; }
       return;
-    case 39: // right
+    case "ArrowRight":
       if (modifierMask === 0) { move(0, 1); break; }
       return;
-    case 40: // down
+    case "ArrowDown":
       if (modifierMask === 0) { move(1, 0); break; }
       return;
-    case 8:  // backspace
+    case "Backspace":
       if (modifierMask === 0)     { undo(unmoveStuff); break; }
       if (modifierMask === SHIFT) { redo(unmoveStuff); break; }
       return;
-    case "Q".charCodeAt(0):
+    case "KeyQ":
       if (modifierMask === 0)     { undo(unmoveStuff); break; }
       if (modifierMask === SHIFT) { redo(unmoveStuff); break; }
       return;
-    case "Z".charCodeAt(0):
+    case "KeyZ":
       if (modifierMask === 0)     { undo(unmoveStuff); break; }
       if (modifierMask === SHIFT) { redo(unmoveStuff); break; }
-      if (persistentState.showEditor && modifierMask === CTRL)        { undo(uneditStuff); break; }
-      if (persistentState.showEditor && modifierMask === CTRL|SHIFT)  { redo(uneditStuff); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL)        { undo(uneditStuff); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL|SHIFT)  { redo(uneditStuff); break; }
       return;
-    case "Y".charCodeAt(0):
+    case "KeyY":
       if (modifierMask === 0)     { redo(unmoveStuff); break; }
-      if (persistentState.showEditor && modifierMask === CTRL)  { redo(uneditStuff); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL)  { redo(uneditStuff); break; }
       return;
-    case "R".charCodeAt(0):
-      if (persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode("select"); break; }
+    case "KeyR":
       if (modifierMask === 0)     { reset(unmoveStuff);  break; }
       if (modifierMask === SHIFT) { unreset(unmoveStuff); break; }
       return;
-
-    case 220: // backslash
-      if (modifierMask === 0) { toggleShowEditor(); break; }
-      return;
-    case "A".charCodeAt(0):
-      if (!persistentState.showEditor && modifierMask === 0)    { move(0, -1); break; }
-      if ( persistentState.showEditor && modifierMask === 0)    { setPaintBrushTileCode(PORTAL); break; }
-      if ( persistentState.showEditor && modifierMask === CTRL) { selectAll(); break; }
-      return;
-    case "E".charCodeAt(0):
+    case 'KeyE':
+      if (modifierMask === SHIFT) { toggleShowEditor(); break; }
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(SPACE); break; }
       return;
-    case 46: // delete
+    case "Delete":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(SPACE); break; }
       return;
-    case "W".charCodeAt(0):
+    case "KeyW":
       if (!persistentState.showEditor && modifierMask === 0) { move(-1, 0); break; }
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(WALL); break; }
       return;
-    case "S".charCodeAt(0):
+    case "KeyA":
+      if (!persistentState.showEditor && modifierMask === 0)    { move(0, -1); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL) { selectAll(); break; }
+      return;
+    case "KeyS":
       if (!persistentState.showEditor && modifierMask === 0)     { move(1, 0); break; }
       if ( persistentState.showEditor && modifierMask === 0)     { setPaintBrushTileCode(SPIKE); break; }
-      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode("resize"); break; }
-      if ( persistentState.showEditor && modifierMask === CTRL)  { saveLevel(); break; }
-      if (!persistentState.showEditor && modifierMask === CTRL)  { saveReplay(); break; }
-      if (modifierMask === (CTRL|SHIFT))                         { saveReplay(); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode("select"); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL|SHIFT) { saveLevel(); break; }
+      if (modifierMask === CTRL) { saveReplay(); break; }
       return;
-    case "X".charCodeAt(0):
+    case "KeyD":
+      if (!persistentState.showEditor && modifierMask === 0)     { move(0, 1); break; }
+      return;
+    case "KeyX":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(EXIT); break; }
       if ( persistentState.showEditor && modifierMask === CTRL) { cutSelection(); break; }
       return;
-    case "F".charCodeAt(0):
+    case "KeyF":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(FRUIT); break; }
       return;
-    case "D".charCodeAt(0):
-      if (!persistentState.showEditor && modifierMask === 0) { move(0, 1); break; }
+    case "KeyP":
+      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(PORTAL); break; }
+      return;
+    case "KeyN":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(SNAKE); break; }
       return;
-    case "B".charCodeAt(0):
+    case "KeyB":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(BLOCK); break; }
       return;
-    case "G".charCodeAt(0):
-      if (modifierMask === 0) { toggleGrid(); break; }
-      if ( persistentState.showEditor && modifierMask === SHIFT) { toggleGravity(); break; }
-      return;
-    case "C".charCodeAt(0):
+    case "KeyC":
       if ( persistentState.showEditor && modifierMask === SHIFT) { toggleCollision(); break; }
       if ( persistentState.showEditor && modifierMask === CTRL)  { copySelection();   break; }
       return;
-    case "V".charCodeAt(0):
+    case "KeyG":
+      if (modifierMask === 0) { toggleGrid(); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { toggleGravity(); break; }
+      return;
+    case "KeyV":
       if ( persistentState.showEditor && modifierMask === CTRL) { setPaintBrushTileCode("paste"); break; }
       return;
-    case 32: // spacebar
-    case 9:  // tab
+    case "Escape":
+      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(null); break; }
+      return;
+    case "Space":
+    case "Tab":
       if (modifierMask === 0)     { switchSnakes( 1); break; }
       if (modifierMask === SHIFT) { switchSnakes(-1); break; }
       return;
-    case "1".charCodeAt(0):
-    case "2".charCodeAt(0):
-    case "3".charCodeAt(0):
-    case "4".charCodeAt(0):
-      var index = event.keyCode - "1".charCodeAt(0);
-      var delta;
-      if (modifierMask === 0) {
-        delta = 1;
-      } else if (modifierMask === SHIFT) {
-        delta = -1;
-      } else return;
-      if (isAlive()) {
-        (function() {
-          var snakes = findSnakesOfColor(index);
-          if (snakes.length === 0) return;
-          for (var i = 0; i < snakes.length; i++) {
-            if (snakes[i].id === activeSnakeId) {
-              activeSnakeId = snakes[(i + delta + snakes.length) % snakes.length].id;
-              return;
-            }
-          }
-          activeSnakeId = snakes[0].id;
-        })();
-      }
+    case "Digit1":
+    case "Digit2":
+    case "Digit3":
+    case "Digit4":
+    case "Digit5":
+    case "Digit6":
+    case "Digit7":
+    case "Digit8":
+    case "Digit9":
+      if (modifierMask !== 0) return;
+      if (!isAlive()) return;
+      var index = event.key.slice(-1) - 1;
+      var snakes = getSnakes();
+      snakes.sort(compareId);
+      activeSnakeId = snakes[index % snakes.length].id;
       break;
-    case 27: // escape
-      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(null); break; }
-      return;
     default: return;
   }
   event.preventDefault();
@@ -1588,7 +1580,7 @@ function isAnyCheatcodeEnabled() {
 
 
 function showEditorChanged() {
-  document.getElementById("showHideEditor").textContent = (persistentState.showEditor ? "Hide" : "Show") + " Editor Stuff";
+  document.getElementById("showHideEditor").textContent = (persistentState.showEditor ? "Hide" : "Show") + " Editor";
   ["editorDiv", "editorPane"].forEach(function(id) {
     document.getElementById(id).style.display = persistentState.showEditor ? "block" : "none";
   });

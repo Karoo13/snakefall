@@ -1,6 +1,9 @@
-if (typeof VERSION !== "undefined") {
-  document.getElementById("versionSpan").innerHTML =
-    '<a href="https://github.com/thejoshwolfe/snakefall/commits/' + VERSION + '">' + VERSION + '</a>';
+function unreachable() { return new Error("unreachable"); }
+if (typeof VERSION === "undefined") {
+  let versionSpan = document.getElementById("versionSpan");
+  if (versionSpan) {
+    versionSpan.innerHTML = "p.1.1";
+  }
 }
 var canvas = document.getElementById("canvas");
 
@@ -11,17 +14,17 @@ var SPIKE = "2".charCodeAt(0);
 var FRUIT_v0 = "3".charCodeAt(0); // legacy
 var EXIT = "4".charCodeAt(0);
 var PORTAL = "5".charCodeAt(0);
-var PLATFORM = "6".charCodeAt(0);
-var WOODPLATFORM = "w".charCodeAt(0);
+var PLATFORM = "6".charCodeAt(0); // legacy
 var PLATFORMU = "u".charCodeAt(0);
 var PLATFORMD = "d".charCodeAt(0);
 var PLATFORML = "l".charCodeAt(0);
 var PLATFORMR = "r".charCodeAt(0);
+var WOODPLATFORM = "w".charCodeAt(0);
 var FOAM = "f".charCodeAt(0);
 var DIGGABLEDIRT = "t".charCodeAt(0);
 var OPENGATE = "o".charCodeAt(0);
 var CLOSEDGATE = "c".charCodeAt(0);
-var validTileCodes = [SPACE, WALL, SPIKE, FRUIT, EXIT, PORTAL, PLATFORM, WOODPLATFORM, PLATFORMU, PLATFORMD, PLATFORML, PLATFORMR, FOAM, DIGGABLEDIRT, OPENGATE, CLOSEDGATE];
+var validTileCodes = [SPACE, WALL, SPIKE, FRUIT, EXIT, PORTAL, PLATFORM, PLATFORMU, PLATFORMD, PLATFORML, PLATFORMR, WOODPLATFORM, FOAM, DIGGABLEDIRT, OPENGATE, CLOSEDGATE];
 
 // object types
 var SNAKE = "s";
@@ -35,6 +38,7 @@ var uneditStuff = {undoStack:[], redoStack:[], spanId:"editsSpan", undoButtonId:
 var paradoxes = [];
 function loadLevel(newLevel) {
   level = newLevel;
+  currentSerializedLevel = compressSerialization(stringifyLevel(newLevel));
 
   activateAnySnakePlease();
   unmoveStuff.undoStack = [];
@@ -43,6 +47,7 @@ function loadLevel(newLevel) {
   uneditStuff.undoStack = [];
   uneditStuff.redoStack = [];
   undoStuffChanged(uneditStuff);
+  blockSupportRenderCache = {};
   render();
 }
 
@@ -217,7 +222,7 @@ function stringifyLevel(level) {
 
   // sanity check
   var shouldBeTheSame = parseLevel(output);
-  if (!deepEquals(level, shouldBeTheSame)) throw asdf; // serialization/deserialization is broken
+  if (!deepEquals(level, shouldBeTheSame)) throw unreachable(); // serialization/deserialization is broken
 
   return output;
 }
@@ -276,19 +281,100 @@ function decompressSerialization(string) {
   return result;
 }
 
+var replayMagicNumber = "nmGTi8PB";
 function stringifyReplay() {
-  throw asdf; // TODO
+  var output = replayMagicNumber + "&";
+  // only specify the snake id in an input if it's different from the previous.
+  // the first snake index is 0 to optimize for the single-snake case.
+  var currentSnakeId = 0;
+  for (var i = 0; i < unmoveStuff.undoStack.length; i++) {
+    var firstChange = unmoveStuff.undoStack[i][0];
+    if (firstChange[0] !== "i") throw unreachable();
+    var snakeId = firstChange[1];
+    var dr = firstChange[2];
+    var dc = firstChange[3];
+    var directionCode;
+    if      (dr ===-1 && dc === 0) directionCode = "u";
+    else if (dr === 0 && dc ===-1) directionCode = "l";
+    else if (dr === 1 && dc === 0) directionCode = "d";
+    else if (dr === 0 && dc === 1) directionCode = "r";
+    else throw unreachable();
+    if (snakeId !== currentSnakeId) {
+      output += snakeId; // int to string
+      currentSnakeId = snakeId;
+    }
+    output += directionCode;
+  }
+  return output;
 }
 function parseAndLoadReplay(string) {
-  throw asdf; // TODO
+  string = decompressSerialization(string);
+  var expectedPrefix = replayMagicNumber + "&";
+  if (string.substring(0, expectedPrefix.length) !== expectedPrefix) throw new Error("unrecognized replay string");
+  var cursor = expectedPrefix.length;
+
+  // the starting snakeid is 0, which may not exist, but we only validate it when doing a move.
+  activeSnakeId = 0;
+  while (cursor < string.length) {
+    var snakeIdStr = "";
+    var c = string.charAt(cursor);
+    cursor += 1;
+    while ('0' <= c && c <= '9') {
+      snakeIdStr += c;
+      if (cursor >= string.length) throw new Error("replay string has unexpected end of input");
+      c = string.charAt(cursor);
+      cursor += 1;
+    }
+    if (snakeIdStr.length > 0) {
+      activeSnakeId = parseInt(snakeIdStr);
+      // don't just validate when switching snakes, but on every move.
+    }
+
+    // doing a move.
+    if (!getSnakes().some(function(snake) {
+      return snake.id === activeSnakeId;
+    })) {
+      throw new Error("invalid snake id: " + activeSnakeId);
+    }
+    switch (c) {
+      case 'l': move( 0, -1); break;
+      case 'u': move(-1,  0); break;
+      case 'r': move( 0,  1); break;
+      case 'd': move( 1,  0); break;
+      default: throw new Error("replay string has invalid direction: " + c);
+    }
+  }
+
+  // now that the replay was executed successfully, undo it all so that it's available in the redo buffer.
+  reset(unmoveStuff);
+  document.getElementById("removeButton").classList.add("click-me");
 }
 
-function saveToUrlBar(withReplay) {
+var currentSerializedLevel;
+function saveLevel() {
   if (isDead()) return alert("Can't save while you're dead!");
-  var hash = "#level=" + compressSerialization(stringifyLevel(level));
-  if (withReplay) {
-    hash += "#replay=" + stringifyReplay();
+  var serializedLevel = compressSerialization(stringifyLevel(level));
+  currentSerializedLevel = serializedLevel;
+  var hash = "#level=" + serializedLevel;
+  expectHash = hash;
+  location.hash = hash;
+
+  // This marks a starting point for solving the level.
+  unmoveStuff.undoStack = [];
+  unmoveStuff.redoStack = [];
+  editorHasBeenTouched = false;
+  undoStuffChanged(unmoveStuff);
+}
+
+function saveReplay() {
+  if (dirtyState === EDITOR_DIRTY) return alert("Can't save a replay with unsaved editor changes.");
+  // preserve the level in the url bar.
+  var hash = "#level=" + currentSerializedLevel;
+  if (dirtyState === REPLAY_DIRTY) {
+    // there is a replay to save
+    hash += "#replay=" + compressSerialization(stringifyReplay());
   }
+  expectHash = hash;
   location.hash = hash;
 }
 
@@ -317,11 +403,11 @@ function deepEquals(a, b) {
 }
 
 function getLocation(level, r, c) {
-  if (!isInBounds(level, r, c)) throw asdf;
+  if (!isInBounds(level, r, c)) throw unreachable();
   return r * level.width + c;
 }
 function getRowcol(level, location) {
-  if (location < 0 || location >= level.width * level.height) throw asdf;
+  if (location < 0 || location >= level.width * level.height) throw unreachable();
   var r = Math.floor(location / level.width);
   var c = location % level.width;
   return {r:r, c:c};
@@ -345,132 +431,136 @@ document.addEventListener("keydown", function(event) {
     (event.ctrlKey ? CTRL : 0) |
     (event.altKey ? ALT : 0)
   );
-  switch (event.keyCode) {
-    case 37: // left
+  switch (event.code) {
+    case "ArrowLeft":
       if (modifierMask === 0) { move(0, -1); break; }
       return;
-    case 38: // up
+    case "ArrowUp":
       if (modifierMask === 0) { move(-1, 0); break; }
       return;
-    case 39: // right
+    case "ArrowRight":
       if (modifierMask === 0) { move(0, 1); break; }
       return;
-    case 40: // down
+    case "ArrowDown":
       if (modifierMask === 0) { move(1, 0); break; }
       return;
-    case 8:  // backspace
+    case "Backspace":
       if (modifierMask === 0)     { undo(unmoveStuff); break; }
       if (modifierMask === SHIFT) { redo(unmoveStuff); break; }
       return;
-    case "Q".charCodeAt(0):
+    case "KeyQ":
       if (modifierMask === 0)     { undo(unmoveStuff); break; }
       if (modifierMask === SHIFT) { redo(unmoveStuff); break; }
       return;
-    case "Z".charCodeAt(0):
+    case "KeyZ":
       if (modifierMask === 0)     { undo(unmoveStuff); break; }
       if (modifierMask === SHIFT) { redo(unmoveStuff); break; }
-      if (persistentState.showEditor && modifierMask === CTRL)        { undo(uneditStuff); break; }
-      if (persistentState.showEditor && modifierMask === CTRL|SHIFT)  { redo(uneditStuff); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL)        { undo(uneditStuff); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL|SHIFT)  { redo(uneditStuff); break; }
       return;
-    case "Y".charCodeAt(0):
+    case "KeyY":
       if (modifierMask === 0)     { redo(unmoveStuff); break; }
-      if (persistentState.showEditor && modifierMask === CTRL)  { redo(uneditStuff); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL)  { redo(uneditStuff); break; }
       return;
-    case "R".charCodeAt(0):
-      if (persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode("select"); break; }
+    case "KeyR":
       if (modifierMask === 0)     { reset(unmoveStuff);  break; }
-      if (modifierMask === SHIFT) { replay(unmoveStuff); break; }
+      if (modifierMask === SHIFT) { unreset(unmoveStuff); break; }
       return;
-
-    case "P".charCodeAt(0):
-      if ( persistentState.showEditor && modifierMask === 0) { playtest(); break; }
-      return;
-    case "L".charCodeAt(0):
-      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(PLATFORM); break; }
-      return;
-    case 220: // backslash
-      if (modifierMask === 0) { toggleShowEditor(); break; }
-      return;
-    case "A".charCodeAt(0):
-      if (!persistentState.showEditor && modifierMask === 0)    { move(0, -1); break; }
-      if ( persistentState.showEditor && modifierMask === 0)    { setPaintBrushTileCode(PORTAL); break; }
-      if ( persistentState.showEditor && modifierMask === CTRL) { selectAll(); break; }
-      return;
-    case "E".charCodeAt(0):
+    case 'KeyE':
+      if (modifierMask === SHIFT) { toggleShowEditor(); break; }
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(SPACE); break; }
       return;
-    case 46: // delete
+    case "Delete":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(SPACE); break; }
       return;
-    case "W".charCodeAt(0):
+    case "KeyW":
       if (!persistentState.showEditor && modifierMask === 0) { move(-1, 0); break; }
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(WALL); break; }
       return;
-    case "S".charCodeAt(0):
+    case "KeyA":
+      if (!persistentState.showEditor && modifierMask === 0)    { move(0, -1); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL) { selectAll(); break; }
+      return;
+    case "KeyS":
       if (!persistentState.showEditor && modifierMask === 0)     { move(1, 0); break; }
       if ( persistentState.showEditor && modifierMask === 0)     { setPaintBrushTileCode(SPIKE); break; }
-      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode("resize"); break; }
-      if (modifierMask ===  CTRL       ) { saveToUrlBar(); break; }
-      if (modifierMask === (CTRL|SHIFT)) { saveToUrlBar(true); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode("select"); break; }
+      if ( persistentState.showEditor && modifierMask === CTRL|SHIFT) { saveLevel(); break; }
+      if (modifierMask === CTRL) { saveReplay(); break; }
       return;
-    case "X".charCodeAt(0):
+    case "KeyD":
+      if (!persistentState.showEditor && modifierMask === 0)     { move(0, 1); break; }
+      if ( persistentState.showEditor && modifierMask === 0)     { setPaintBrushTileCode(DIGGABLEDIRT); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode(FOAM); break; }
+      return;
+    case "KeyX":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(EXIT); break; }
       if ( persistentState.showEditor && modifierMask === CTRL) { cutSelection(); break; }
       return;
-    case "F".charCodeAt(0):
+    case "KeyF":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(FRUIT); break; }
       return;
-    case "D".charCodeAt(0):
-      if (!persistentState.showEditor && modifierMask === 0) { move(0, 1); break; }
+    case "KeyP":
+      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(PORTAL); break; }
+      return;
+    case "KeyN":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(SNAKE); break; }
       return;
-    case "B".charCodeAt(0):
+    case "KeyB":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(BLOCK); break; }
       return;
-    case "G".charCodeAt(0):
-      if (modifierMask === 0) { toggleGrid(); break; }
-      if ( persistentState.showEditor && modifierMask === SHIFT) { toggleGravity(); break; }
+    case "KeyU":
+      if ( persistentState.showEditor && modifierMask === 0)     { setPaintBrushTileCode(PLATFORMU); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode(WOODPLATFORM); break; }
       return;
-    case "C".charCodeAt(0):
+    case "KeyH":
+      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(PLATFORML); break; }
+      return;
+    case "KeyJ":
+      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(PLATFORMD); break; }
+      return;
+    case "KeyK":
+      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(PLATFORMR); break; }
+      return;
+    case "KeyO":
+      if ( persistentState.showEditor && modifierMask === 0)     { setPaintBrushTileCode(OPENGATE); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode(CLOSEDGATE); break; }
+      return;
+    case "KeyC":
       if ( persistentState.showEditor && modifierMask === SHIFT) { toggleCollision(); break; }
       if ( persistentState.showEditor && modifierMask === CTRL)  { copySelection();   break; }
       return;
-    case "V".charCodeAt(0):
+    case "KeyG":
+      if (modifierMask === 0) { toggleGrid(); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { toggleGravity(); break; }
+      return;
+    case "KeyV":
       if ( persistentState.showEditor && modifierMask === CTRL) { setPaintBrushTileCode("paste"); break; }
       return;
-    case 32: // spacebar
-    case 9:  // tab
+    case "Escape":
+      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(null); break; }
+      return;
+    case "Space":
+    case "Tab":
       if (modifierMask === 0)     { switchSnakes( 1); break; }
       if (modifierMask === SHIFT) { switchSnakes(-1); break; }
       return;
-    case "1".charCodeAt(0):
-    case "2".charCodeAt(0):
-    case "3".charCodeAt(0):
-    case "4".charCodeAt(0):
-      var index = event.keyCode - "1".charCodeAt(0);
-      var delta;
-      if (modifierMask === 0) {
-        delta = 1;
-      } else if (modifierMask === SHIFT) {
-        delta = -1;
-      } else return;
-      if (isAlive()) {
-        (function() {
-          var snakes = findSnakesOfColor(index);
-          if (snakes.length === 0) return;
-          for (var i = 0; i < snakes.length; i++) {
-            if (snakes[i].id === activeSnakeId) {
-              activeSnakeId = snakes[(i + delta + snakes.length) % snakes.length].id;
-              return;
-            }
-          }
-          activeSnakeId = snakes[0].id;
-        })();
-      }
+    case "Digit1":
+    case "Digit2":
+    case "Digit3":
+    case "Digit4":
+    case "Digit5":
+    case "Digit6":
+    case "Digit7":
+    case "Digit8":
+    case "Digit9":
+      if (modifierMask !== 0) return;
+      if (!isAlive()) return;
+      var index = event.key.slice(-1) - 1;
+      var snakes = getSnakes();
+      snakes.sort(compareId);
+      activeSnakeId = snakes[index % snakes.length].id;
       break;
-    case 27: // escape
-      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(null); break; }
-      return;
     default: return;
   }
   event.preventDefault();
@@ -497,7 +587,7 @@ document.getElementById("showGridButton").addEventListener("click", function() {
   toggleGrid();
 });
 document.getElementById("saveProgressButton").addEventListener("click", function() {
-  saveToUrlBar(true);
+  saveReplay();
 });
 document.getElementById("restartButton").addEventListener("click", function() {
   reset(unmoveStuff);
@@ -566,12 +656,12 @@ var paintButtonIdAndTileCodes = [
   ["paintExitButton", EXIT],
   ["paintFruitButton", FRUIT],
   ["paintPortalButton", PORTAL],
-  ["paintPlatformButton", PLATFORM],
-  ["paintWoodPlatformButton", WOODPLATFORM],
-  //["paintPlatformUButton", PLATFORMU],
+  //["paintPlatformButton", PLATFORM],
+  ["paintPlatformUButton", PLATFORMU],
   ["paintPlatformDButton", PLATFORMD],
   ["paintPlatformLButton", PLATFORML],
   ["paintPlatformRButton", PLATFORMR],
+  ["paintWoodPlatformButton", WOODPLATFORM],
   ["paintFoamButton", FOAM],
   ["paintDiggableDirtButton", DIGGABLEDIRT],
   ["paintOpenGateButton", OPENGATE],
@@ -586,9 +676,6 @@ paintButtonIdAndTileCodes.forEach(function(pair) {
     setPaintBrushTileCode(tileCode);
   });
 });
-document.getElementById("playtestButton").addEventListener("click", function() {
-  playtest();
-});
 document.getElementById("uneditButton").addEventListener("click", function() {
   undo(uneditStuff);
   render();
@@ -598,7 +685,7 @@ document.getElementById("reeditButton").addEventListener("click", function() {
   render();
 });
 document.getElementById("saveLevelButton").addEventListener("click", function() {
-  saveToUrlBar();
+  saveLevel();
 });
 document.getElementById("copyButton").addEventListener("click", function() {
   copySelection();
@@ -623,10 +710,10 @@ function toggleCollision() {
   refreshCheatButtonText();
 }
 function refreshCheatButtonText() {
-  document.getElementById("cheatGravityButton").value = isGravityEnabled ? "Gravity: ON" : "Gravity: OFF";
+  document.getElementById("cheatGravityButton").textContent = isGravityEnabled ? "Gravity: ON" : "Gravity: OFF";
   document.getElementById("cheatGravityButton").style.background = isGravityEnabled ? "" : "#f88";
 
-  document.getElementById("cheatCollisionButton").value = isCollisionEnabled ? "Collision: ON" : "Collision: OFF";
+  document.getElementById("cheatCollisionButton").textContent = isCollisionEnabled ? "Collision: ON" : "Collision: OFF";
   document.getElementById("cheatCollisionButton").style.background = isCollisionEnabled ? "" : "#f88";
 }
 
@@ -677,7 +764,7 @@ canvas.addEventListener("dblclick", function(event) {
     } else if (object.type === FRUIT) {
       // edit fruits, i guess
       paintBrushTileCode = FRUIT;
-    } else throw asdf;
+    } else throw unreachable();
     paintBrushTileCodeChanged();
   }
 });
@@ -729,6 +816,10 @@ canvas.addEventListener("mouseout", function() {
 function getLocationFromEvent(event) {
   var r = Math.floor(eventToMouseY(event, canvas) / tileSize);
   var c = Math.floor(eventToMouseX(event, canvas) / tileSize);
+  // since the canvas is centered, the bounding client rect can be half-pixel aligned,
+  // resulting in slightly out-of-bounds mouse events.
+  r = clamp(r, 0, level.height);
+  c = clamp(c, 0, level.width);
   return getLocation(level, r, c);
 }
 function eventToMouseX(event, canvas) { return event.clientX - canvas.getBoundingClientRect().left; }
@@ -789,7 +880,7 @@ function setPaintBrushTileCode(tileCode) {
               return;
             }
           }
-          throw asdf
+          throw unreachable()
         })();
       } else {
         // first one
@@ -1045,7 +1136,7 @@ function paintAtLocation(location, changeLog) {
         object.id = newBlock().id;
       } else if (object.type === FRUIT) {
         object.id = newFruit().id;
-      } else throw asdf;
+      } else throw unreachable();
       level.objects.push(object);
       changeLog.push([object.type, object.id, [0,[]], serializeObjectState(object)]);
     });
@@ -1113,12 +1204,15 @@ function paintAtLocation(location, changeLog) {
         }
       }
       changeLog.push([thisBlock.type, thisBlock.id, oldBlockSerialization, serializeObjectState(thisBlock)]);
+      delete blockSupportRenderCache[thisBlock.id];
     }
   } else if (paintBrushTileCode === FRUIT) {
     paintTileAtLocation(location, SPACE, changeLog);
     removeAnyObjectAtLocation(location, changeLog);
-    level.objects.push(newFruit(location));
-  } else throw asdf;
+    var object = newFruit(location)
+    level.objects.push(object);
+    changeLog.push([object.type, object.id, serializeObjectState(null), serializeObjectState(object)]);
+  } else throw unreachable();
   render();
 }
 
@@ -1128,14 +1222,14 @@ function paintTileAtLocation(location, tileCode, changeLog) {
   level.map[location] = tileCode;
 }
 
-function playtest() {
-  unmoveStuff.undoStack = [];
-  unmoveStuff.redoStack = [];
-  undoStuffChanged(unmoveStuff);
-}
-
 function pushUndo(undoStuff, changeLog) {
   // changeLog = [
+  //   ["i", 0, -1, 0, animationQueue, freshlyRemovedAnimatedObjects],
+  //                                                 // player input for snake 0, dr:-1, dc:0. has no effect on state.
+  //                                                 //   "i" is always the first change in normal player movement.
+  //                                                 //   if a changeLog does not start with "i", then it is an editor action.
+  //                                                 //   animationQueue and freshlyRemovedAnimatedObjects
+  //                                                 //   are used for animating re-move.
   //   ["m", 21, 0, 1],                              // map at location 23 changed from 0 to 1
   //   ["s", 0, [false, [1,2]], [false, [2,3]]],     // snake id 0 moved from alive at [1, 2] to alive at [2, 3]
   //   ["s", 1, [false, [11,12]], [true, [12,13]]],  // snake id 1 moved from alive at [11, 12] to dead at [12, 13]
@@ -1152,12 +1246,17 @@ function pushUndo(undoStuff, changeLog) {
   undoStuff.undoStack.push(changeLog);
   undoStuff.redoStack = [];
   paradoxes = [];
+
+  if (undoStuff === uneditStuff) editorHasBeenTouched = true;
+
   undoStuffChanged(undoStuff);
 }
 function reduceChangeLog(changeLog) {
   for (var i = 0; i < changeLog.length - 1; i++) {
     var change = changeLog[i];
-    if (change[0] === "h") {
+    if (change[0] === "i") {
+      continue; // don't reduce player input
+    } else if (change[0] === "h") {
       for (var j = i + 1; j < changeLog.length; j++) {
         var otherChange = changeLog[j];
         if (otherChange[0] === "h") {
@@ -1227,7 +1326,7 @@ function reduceChangeLog(changeLog) {
         changeLog.splice(i, 1);
         i--;
       }
-    } else throw asdf;
+    } else throw unreachable();
   }
 }
 function undo(undoStuff) {
@@ -1255,6 +1354,8 @@ function undoOneFrame(undoStuff) {
     redoChangeLog.push(level.width);
     undoStuff.redoStack.push(redoChangeLog);
   }
+
+  if (undoStuff === uneditStuff) editorHasBeenTouched = true;
 }
 function redo(undoStuff) {
   if (undoStuff.redoStack.length === 0) return; // already at the beginning
@@ -1264,7 +1365,7 @@ function redo(undoStuff) {
   redoOneFrame(undoStuff);
   undoStuffChanged(undoStuff);
 }
-function replay(undoStuff) {
+function unreset(undoStuff) {
   animationQueue = [];
   animationQueueCursor = 0;
   paradoxes = [];
@@ -1272,6 +1373,11 @@ function replay(undoStuff) {
     redoOneFrame(undoStuff);
   }
   undoStuffChanged(undoStuff);
+
+  // don't animate the last frame
+  animationQueue = [];
+  animationQueueCursor = 0;
+  freshlyRemovedAnimatedObjects = [];
 }
 function redoOneFrame(undoStuff) {
   var doThis = undoStuff.redoStack.pop();
@@ -1281,6 +1387,8 @@ function redoOneFrame(undoStuff) {
     undoChangeLog.push(level.width);
     undoStuff.undoStack.push(undoChangeLog);
   }
+
+  if (undoStuff === uneditStuff) editorHasBeenTouched = true;
 }
 function undoChanges(changes, changeLog) {
   var widthContext = changes.pop();
@@ -1290,9 +1398,22 @@ function undoChanges(changes, changeLog) {
     if (paradoxDescription != null) paradoxes.push(paradoxDescription);
   }
 
+  var lastChange = changes[changes.length - 1];
+  if (lastChange[0] === "i") {
+    // replay animation
+    animationQueue = lastChange[4];
+    animationQueueCursor = 0;
+    freshlyRemovedAnimatedObjects = lastChange[5];
+    animationStart = new Date().getTime();
+  }
+
   function undoChange(change) {
     // note: everything here is going backwards: to -> from
-    if (change[0] === "h") {
+    if (change[0] === "i") {
+      // no state change, but preserve the intention.
+      changeLog.push(change);
+      return null;
+    } else if (change[0] === "h") {
       // change height
       var fromHeight = change[1];
       var   toHeight = change[2];
@@ -1351,7 +1472,7 @@ function undoChanges(changes, changeLog) {
         level.objects.push(object);
         changeLog.push([object.type, object.id, [0,[]], serializeObjectState(object)]);
       }
-    } else throw asdf;
+    } else throw unreachable();
   }
 }
 function describe(arg1, arg2) {
@@ -1367,8 +1488,7 @@ function describe(arg1, arg2) {
       case SPIKE: return "Spikes";
       case EXIT:  return "an Exit";
       case PORTAL:  return "a Portal";
-      case PLATFORM:  return "a Platform";
-      default: throw asdf;
+      default: throw unreachable();
     }
   }
   if (arg1 === SNAKE) {
@@ -1378,11 +1498,7 @@ function describe(arg1, arg2) {
         case "#0f0": return " (Green)";
         case "#00f": return " (Blue)";
         case "#ff0": return " (Yellow)";
-        case "#f0f": return " (Magenta)";
-        case "#0ff": return " (Cyan)";
-        case "#80f": return " (Purple)";
-        case "#f80": return " (Orange)";
-        default: throw asdf;
+        default: throw unreachable();
       }
     })();
     return "Snake " + arg2 + color;
@@ -1394,7 +1510,7 @@ function describe(arg1, arg2) {
     return "Fruit";
   }
   if (typeof arg1 === "object") return describe(arg1.type, arg1.id);
-  throw asdf;
+  throw unreachable();
 }
 
 function undoStuffChanged(undoStuff) {
@@ -1422,6 +1538,57 @@ function undoStuffChanged(undoStuff) {
     paradoxDivContent += "Time Travel Paradox! " + uniqueParadoxes[i];
   });
   document.getElementById("paradoxDiv").innerHTML = paradoxDivContent;
+
+  updateDirtyState();
+
+  if (unmoveStuff.redoStack.length === 0) {
+    document.getElementById("removeButton").classList.remove("click-me");
+  }
+}
+
+var CLEAN_NO_TIMELINES = 0;
+var CLEAN_WITH_REDO = 1;
+var REPLAY_DIRTY = 2;
+var EDITOR_DIRTY = 3;
+var dirtyState = CLEAN_NO_TIMELINES;
+var editorHasBeenTouched = false;
+function updateDirtyState() {
+  if (haveCheatcodesBeenUsed() || editorHasBeenTouched) {
+    dirtyState = EDITOR_DIRTY;
+  } else if (unmoveStuff.undoStack.length > 0) {
+    dirtyState = REPLAY_DIRTY;
+  } else if (unmoveStuff.redoStack.length > 0) {
+    dirtyState = CLEAN_WITH_REDO;
+  } else {
+    dirtyState = CLEAN_NO_TIMELINES;
+  }
+
+  var saveLevelButton = document.getElementById("saveLevelButton");
+  // the save button clears your timelines
+  saveLevelButton.disabled = dirtyState === CLEAN_NO_TIMELINES;
+  if (dirtyState >= EDITOR_DIRTY) {
+    // you should save
+    saveLevelButton.classList.add("click-me");
+    saveLevelButton.textContent = "*" + "Save Level";
+  } else {
+    saveLevelButton.classList.remove("click-me");
+    saveLevelButton.textContent = "Save Level";
+  }
+
+  var saveProgressButton = document.getElementById("saveProgressButton");
+  // you can't save a replay if your level is dirty
+  if (dirtyState === CLEAN_WITH_REDO) {
+    saveProgressButton.textContent = "Forget Progress";
+  } else {
+    saveProgressButton.textContent = "Save Progress";
+  }
+  saveProgressButton.disabled = dirtyState >= EDITOR_DIRTY || dirtyState === CLEAN_NO_TIMELINES;
+}
+function haveCheatcodesBeenUsed() {
+  return !unmoveStuff.undoStack.every(function(changeLog) {
+    // normal movement always starts with "i".
+    return changeLog[0][0] === "i";
+  });
 }
 
 var persistentState = {
@@ -1448,8 +1615,15 @@ var isCollisionEnabled = true;
 function isCollision() {
   return isCollisionEnabled || !persistentState.showEditor;
 }
+function isAnyCheatcodeEnabled() {
+  return persistentState.showEditor && (
+    !isGravityEnabled || !isCollisionEnabled
+  );
+}
+
+
 function showEditorChanged() {
-  document.getElementById("showHideEditor").value = (persistentState.showEditor ? "Hide" : "Show") + " Editor Stuff";
+  document.getElementById("showHideEditor").textContent = (persistentState.showEditor ? "Hide" : "Show") + " Editor";
   ["editorDiv", "editorPane"].forEach(function(id) {
     document.getElementById(id).style.display = persistentState.showEditor ? "block" : "none";
   });
@@ -1464,12 +1638,18 @@ function move(dr, dc) {
   animationQueueCursor = 0;
   freshlyRemovedAnimatedObjects = [];
   animationStart = new Date().getTime();
-  var changeLog = [];
   var activeSnake = findActiveSnake();
   var headRowcol = getRowcol(level, activeSnake.locations[0]);
   var newRowcol = {r:headRowcol.r + dr, c:headRowcol.c + dc};
   if (!isInBounds(level, newRowcol.r, newRowcol.c)) return;
   var newLocation = getLocation(level, newRowcol.r, newRowcol.c);
+  var changeLog = [];
+
+  // The changeLog for a player movement starts with the input
+  // when playing normally.
+  if (!isAnyCheatcodeEnabled()) {
+    changeLog.push(["i", activeSnake.id, dr, dc, animationQueue, freshlyRemovedAnimatedObjects]);
+  }
 
   var ate = false;
   var pushedObjects = [];
@@ -1622,7 +1802,7 @@ function move(dr, dc) {
             ],
           ]);
           didAnything = true;
-        } else throw asdf;
+        } else throw unreachable();
       });
       if (anySnakesDied) break;
     }
@@ -1688,7 +1868,7 @@ function checkMovement(pusher, pushedObject, dr, dc, pushedObjects, dyingObjects
           if (j < pushedObject.locations.length - 1) neighborLocations.push(pushedObject.locations[j + 1]);
         } else if (pushedObject.type === BLOCK) {
           neighborLocations = pushedObject.locations;
-        } else throw asdf;
+        } else throw unreachable();
         if (neighborLocations.indexOf(forwardLocation) === -1) return false; // flat surface
         // we slip right past it
       }
@@ -1723,12 +1903,12 @@ function checkMovement(pusher, pushedObject, dr, dc, pushedObjects, dyingObjects
     var object = findObjectAtLocation(offsetLocation(forwardLocation, -dr, -dc));
     if (!isTileCodeAir(pusher, object, tileCode, dr, dc)) {
       if (tileCode === SPIKE && dyingObjects != null) {
-        // uh... which object was this again?
-        var deadObject = findObjectAtLocation(offsetLocation(forwardLocation, -dr, -dc));
-        if (deadObject.type === SNAKE) {
-          // ouch!
-          addIfNotPresent(dyingObjects, deadObject);
-          continue;
+          // uh... which object was this again?
+          var deadObject = findObjectAtLocation(offsetLocation(forwardLocation, -dr, -dc));
+          if (deadObject.type === SNAKE) {
+            // ouch!
+            addIfNotPresent(dyingObjects, deadObject);
+            continue;
         }
       }
       // can't push into something solid
@@ -1801,14 +1981,6 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
   // zappo presto!
   var oldState = serializeObjectState(object);
   object.locations = newLocations;
-  for (var i = 0; i < newLocations.length; i++) {
-    var location = newLocations[i];
-    if (level.map[location] == FOAM)
-    {
-      //dig
-      paintTileAtLocation(location, SPACE, changeLog);
-    }
-  }
   changeLog.push([object.type, object.id, oldState, serializeObjectState(object)]);
   animations.push([
     "t" + object.type, // TELEPORT_SNAKE | TELEPORT_BLOCK
@@ -1824,12 +1996,12 @@ function isTileCodeAir(pusher, pushedObject, tileCode, dr, dc) {
   {
     case SPACE: case EXIT: case PORTAL: case OPENGATE: return true;
     case FOAM: return pusher != null;
-    case WOODPLATFORM: return dr != 1 || pusher != null;
     case PLATFORM: return dr != 1;
     case PLATFORMU: return dr != 1;
     case PLATFORMD: return dr != -1;
     case PLATFORML: return dc != 1;
     case PLATFORMR: return dc != -1;
+    case WOODPLATFORM: return dr != 1 || pusher != null;
     default: return false;
   }
 }
@@ -1837,7 +2009,7 @@ function isTileCodeAir(pusher, pushedObject, tileCode, dr, dc) {
 function isTileCodePlatform(tileCode) {
   switch (tileCode)
   {
-    case PLATFORM: case WOODPLATFORM: case PLATFORMU: case PLATFORMD: case PLATFORML: case PLATFORMR: return true;
+    case PLATFORM: case PLATFORMU: case PLATFORMD: case PLATFORML: case PLATFORMR: case WOODPLATFORM: return true;
     default: return false;
   }
 }
@@ -1864,10 +2036,13 @@ function removeObject(object, changeLog) {
     // no longer editing an object that doesn't exit
     paintBrushBlockId = null;
   }
+  if (object.type === BLOCK) {
+    delete blockSupportRenderCache[object.id];
+  }
 }
 function removeFromArray(array, element) {
   var index = array.indexOf(element);
-  if (index === -1) throw asdf;
+  if (index === -1) throw unreachable();
   array.splice(index, 1);
 }
 function findActiveSnake() {
@@ -1875,7 +2050,7 @@ function findActiveSnake() {
   for (var i = 0; i < snakes.length; i++) {
     if (snakes[i].id === activeSnakeId) return snakes[i];
   }
-  throw asdf;
+  throw unreachable();
 }
 function findBlockById(id) {
   return findObjectOfTypeAndId(BLOCK, id);
@@ -1999,6 +2174,13 @@ var animationStart = null; // new Date().getTime()
 var animationProgress; // 0.0 <= x < 1.0
 var freshlyRemovedAnimatedObjects = [];
 
+// render the support beams for blocks into a temporary buffer, and remember it.
+// this is due to stencil buffers causing slowdown on some platforms. see #25.
+var blockSupportRenderCache = {
+  // id: canvas,
+  // "0": document.createElement("canvas"),
+};
+
 function render() {
   if (level == null) return;
   if (animationQueueCursor < animationQueue.length) {
@@ -2069,7 +2251,7 @@ function render() {
   }
 
   // throw this in there somewhere
-  document.getElementById("showGridButton").value = (persistentState.showGrid ? "Hide" : "Show") + " Grid";
+  document.getElementById("showGridButton").textContent = (persistentState.showGrid ? "Hide" : "Show") + " Grid";
 
   if (animationProgress < 1.0) requestAnimationFrame(render);
   return; // this is the end of the function proper
@@ -2088,32 +2270,52 @@ function render() {
     objects.forEach(function(object) {
       if (object.type !== BLOCK) return;
       var animationDisplacementRowcol = findAnimationDisplacementRowcol(object.type, object.id);
-      // Make a stencil that excludes the insides of blocks.
-      // Then when we render the support beams, we won't see the supports inside the block itself.
-      context.save();
-      context.beginPath();
-      // Draw a path around the whole screen in the opposite direction as the rectangle paths below.
-      // This means that the below rectangles will be removing area from the greater rectangle.
-      context.rect(canvas.width, 0, -canvas.width, canvas.height);
-      for (var i = 0; i < object.locations.length; i++) {
-        var rowcol = getRowcol(level, object.locations[i]);
-        rowcol.r += animationDisplacementRowcol.r;
-        rowcol.c += animationDisplacementRowcol.c;
-        context.rect(rowcol.c * tileSize, rowcol.r * tileSize, tileSize, tileSize);
+      var minR = Infinity;
+      var maxR = -Infinity;
+      var minC = Infinity;
+      var maxC = -Infinity;
+      object.locations.forEach(function(location) {
+        var rowcol = getRowcol(level, location);
+        if (rowcol.r < minR) minR = rowcol.r;
+        if (rowcol.r > maxR) maxR = rowcol.r;
+        if (rowcol.c < minC) minC = rowcol.c;
+        if (rowcol.c > maxC) maxC = rowcol.c;
+      });
+      var image = blockSupportRenderCache[object.id];
+      if (image == null) {
+        // render the support beams to a buffer
+        blockSupportRenderCache[object.id] = image = document.createElement("canvas");
+        image.width  = (maxC - minC + 1) * tileSize;
+        image.height = (maxR - minR + 1) * tileSize;
+        var bufferContext = image.getContext("2d");
+        // Make a stencil that excludes the insides of blocks.
+        // Then when we render the support beams, we won't see the supports inside the block itself.
+        bufferContext.beginPath();
+        // Draw a path around the whole screen in the opposite direction as the rectangle paths below.
+        // This means that the below rectangles will be removing area from the greater rectangle.
+        bufferContext.rect(image.width, 0, -image.width, image.height);
+        for (var i = 0; i < object.locations.length; i++) {
+          var rowcol = getRowcol(level, object.locations[i]);
+          var r = rowcol.r - minR;
+          var c = rowcol.c - minC;
+          bufferContext.rect(c * tileSize, r * tileSize, tileSize, tileSize);
+        }
+        bufferContext.clip();
+        for (var i = 0; i < object.locations.length - 1; i++) {
+          var rowcol1 = getRowcol(level, object.locations[i]);
+          rowcol1.r -= minR;
+          rowcol1.c -= minC;
+          var rowcol2 = getRowcol(level, object.locations[i + 1]);
+          rowcol2.r -= minR;
+          rowcol2.c -= minC;
+          var cornerRowcol = {r:rowcol1.r, c:rowcol2.c};
+          drawConnector(bufferContext, rowcol1.r, rowcol1.c, cornerRowcol.r, cornerRowcol.c, blockBackground[object.id % blockBackground.length]);
+          drawConnector(bufferContext, rowcol2.r, rowcol2.c, cornerRowcol.r, cornerRowcol.c, blockBackground[object.id % blockBackground.length]);
+        }
       }
-      context.clip();
-      for (var i = 0; i < object.locations.length - 1; i++) {
-        var rowcol1 = getRowcol(level, object.locations[i]);
-        rowcol1.r += animationDisplacementRowcol.r;
-        rowcol1.c += animationDisplacementRowcol.c;
-        var rowcol2 = getRowcol(level, object.locations[i + 1]);
-        rowcol2.r += animationDisplacementRowcol.r;
-        rowcol2.c += animationDisplacementRowcol.c;
-        var cornerRowcol = {r:rowcol1.r, c:rowcol2.c};
-        drawConnector(rowcol1.r, rowcol1.c, cornerRowcol.r, cornerRowcol.c, blockBackground[object.id % blockBackground.length]);
-        drawConnector(rowcol2.r, rowcol2.c, cornerRowcol.r, cornerRowcol.c, blockBackground[object.id % blockBackground.length]);
-      }
-      context.restore();
+      var r = minR + animationDisplacementRowcol.r;
+      var c = minC + animationDisplacementRowcol.c;
+      context.drawImage(image, c * tileSize, r * tileSize);
     });
 
     // terrain
@@ -2157,9 +2359,12 @@ function render() {
       if (typeof paintBrushTileCode === "number") {
         if (level.map[hoverLocation] !== paintBrushTileCode) {
           drawTile(paintBrushTileCode, hoverRowcol.r, hoverRowcol.c, level, hoverLocation);
-          if (paintBrushTileCode === PLATFORM) {
-            // make it bolder
-            hoverAlpha = 0.4;
+          switch (paintBrushTileCode) {
+            // make some tiles bolder
+            case PLATFORM: case PLATFORMU: case PLATFORMD: case PLATFORML: case PLATFORMR: case WOODPLATFORM: case OPENGATE: case CLOSEDGATE:
+              hoverAlpha = 0.4; break;
+            default:
+              hoverAlpha = 0.2; break;
           }
         }
       } else if (paintBrushTileCode === SNAKE) {
@@ -2187,7 +2392,7 @@ function render() {
           drawTile(tileCode, rowcol.r, rowcol.c, pastedData.level, location);
         });
         pastedData.selectedObjects.forEach(drawObject);
-      } else throw asdf;
+      } else throw unreachable();
 
       context = savedContext;
       context.save();
@@ -2221,9 +2426,6 @@ function render() {
       case PLATFORM:
         drawPlatform(r, c, -1, 0);
         break;
-      case WOODPLATFORM:
-        drawOneWayWall("#D38345", r, c, -1, 0);
-        break;
       case PLATFORMU:
         drawPlatform(r, c, -1, 0);
         break;
@@ -2235,6 +2437,9 @@ function render() {
         break;
       case PLATFORMR:
         drawPlatform(r, c, 0, 1);
+        break;
+      case WOODPLATFORM:
+        drawOneWayWall("#D38345", r, c, -1, 0);
         break;
       case FOAM:
         drawFoam(r, c);
@@ -2248,7 +2453,7 @@ function render() {
       case CLOSEDGATE:
         drawGate(r, c, true);
         break;
-      default: throw asdf;
+      default: throw unreachable();
     }
     function getAdjacentTiles() {
       return [
@@ -2356,7 +2561,7 @@ function render() {
         var rowcol = getRowcol(level, object.locations[0]);
         drawCircle(rowcol.r, rowcol.c, 1, "#f0f");
         break;
-      default: throw asdf;
+      default: throw unreachable();
     }
   }
 
@@ -2788,6 +2993,11 @@ function compareId(a, b) {
 function operatorCompare(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
+function clamp(value, min, max) {
+  if (value < min) return min;
+  if (value > max) return max;
+  return value;
+}
 function copyArray(array) {
   return array.map(identityFunction);
 }
@@ -2805,7 +3015,15 @@ function makeScaleCoordinatesFunction(width1, width2) {
   };
 }
 
+var expectHash;
 window.addEventListener("hashchange", function() {
+  if (location.hash === expectHash) {
+    // We're in the middle of saveLevel() or saveReplay().
+    // Don't react to that event.
+    expectHash = null;
+    return;
+  }
+  // The user typed into the url bar or used Back/Forward browser buttons, etc.
   loadFromLocationHash();
 });
 function loadFromLocationHash() {
@@ -2825,11 +3043,16 @@ function loadFromLocationHash() {
     alert(e);
     return false;
   }
-  if (hashPairs.length > 1) {
-    if (hashPairs[1][0] !== "replay") return false;
-    if (!parseAndLoadReplay(hashPairs[1][1])) return false;
-  }
   loadLevel(level);
+  if (hashPairs.length > 1) {
+    try {
+      if (hashPairs[1][0] !== "replay") throw new Error("unexpected hash pair: " + hashPairs[1][0]);
+      parseAndLoadReplay(hashPairs[1][1]);
+    } catch (e) {
+      alert(e);
+      return false;
+    }
+  }
   return true;
 }
 

@@ -18,15 +18,15 @@
       <td><canvas id="canvas" width=750 height=600></canvas></td>
       <td id="editorPane" style="display:none;">
         <table>
-          <tr><td><button id="saveLevelButton" title="Ctrl+S - saves the current state to the URL bar of your browser; clears unmove/re-move history">Save Level</button></td></tr>
+          <tr><td><button id="saveLevelButton" title="Ctrl+Shift+S - saves the current state to the URL bar of your browser; clears move history">Save Level</button></td></tr>
           <tr><td style="text-align:center;">
             <button id="uneditButton" title="Ctrl+Z" disabled>Unedit &lt;&lt;</button>
             <button id="reeditButton" title="Ctrl+Shift+Z, Ctrl+Y" disabled>&gt;&gt; Re-edit</button><br>
             Edits: <span id="editsSpan">0+0</span>
           </td></tr>
-          <tr><td><button id="resizeButton" title="Shift+S">Resize</button></td></tr>
+          <tr><td><button id="resizeButton" title="Shift+">Resize</button></td></tr>
           <tr><td>
-            <button id="selectButton" title="Shift+R - double click to edit objects">Select</button><br>
+            <button id="selectButton" title="Shift+S">Select</button><br>
             <button id="cutButton" title="Cut (Ctrl+X)" disabled>X</button><button id="copyButton" title="Copy (Ctrl+C)" disabled>C</button><button id="pasteButton" title="Paste (Ctrl+V)" disabled>V</button>
           </td></tr>
           <tr><td><button id="paintSpaceButton" title="E">Erase</button></td></tr>
@@ -34,9 +34,9 @@
           <tr><td><button id="paintSpikeButton" title="S">Spike</button></td></tr>
           <tr><td><button id="paintExitButton" title="X">Exit</button></td></tr>
           <tr><td><button id="paintFruitButton" title="F">Fruit</button></td></tr>
-          <tr><td><button id="paintPortalButton" title="A">Portal</button></td></tr>
-          <tr><td><button id="paintSnakeButton" title="D">Snake</button></td></tr>
-          <tr><td><button id="paintBlockButton" title="B">Block</button></td></tr>
+          <tr><td><button id="paintPortalButton" title="P">Portal</button></td></tr>
+          <tr><td><button id="paintSnakeButton" title="N - select again to change color">Snake</button></td></tr>
+          <tr><td><button id="paintBlockButton" title="B - select again to finish placing">Block</button></td></tr>
           <tr><td><button id="cheatGravityButton" title="Shift+G">Gravity: ON</button></td></tr>
           <tr><td><button id="cheatCollisionButton" title="Shift+C">Collision: ON</button></td></tr>
         </table>
@@ -48,17 +48,17 @@
       Controls (hover for hotkeys):
       <br>
       Arrows<span id="wasdSpan">/WASD</span> to move
-      <button id="switchSnakesButton" title="(Shift+)Spacebar, (Shift+)Tab, 1 - Red, 2 - Green, 3 - Blue, 4 - Yellow">Switch Snakes</button>
+      <button id="switchSnakesButton" title="(Shift+)Spacebar, (Shift+)Tab, or digits">Switch Snakes</button>
       <button id="showGridButton" title="G">Show Grid</button>
       <br>
       <button id="unmoveButton" title="Backspace, Z, Q" disabled>Unmove &lt;&lt;</button>
       Moves: <span id="movesSpan">0+0</span>
       <button id="removeButton" title="Y, Shift+Backspace, Shift+Z, Shift+Q" disabled>&gt;&gt; Re-move</button>
-      <button id="restartButton" title="R - Unmove all the way. Shift+R - Re-move all the way">Restart</button>
-      <button id="saveProgressButton" title="Ctrl+Shift+S - Saves a replay URL to the URL bar of your browser. Use &gt;&gt; Re-move or Shift+R to restore state.">Save Progress</button>
+      <button id="restartButton" title="R - unmove to start; Shift+R - re-move to end">Restart</button>
+      <button id="saveProgressButton" title="Ctrl+S - Saves a replay URL to the URL bar of your browser. Use Re-move or Shift+R to restore state.">Save Progress</button>
     </div>
 
-    <button id="showHideEditor" title="\">Show Editor Stuff</button>
+    <button id="showHideEditor" title="Shift+E">Show Editor</button>
     <div id="editorDiv" style="display:none;">
       <textarea id="serializationTextarea" rows=30 cols=80></textarea>
       <div>
@@ -69,9 +69,8 @@
 
     <div style="margin-top:1em;">This project on Github: <a href="https://github.com/Karoo13/snakefall/">Karoo13/snakefall</a> version <span id="versionSpan">???</span></div>
     <div>Check out some <a href="https://github.com/thejoshwolfe/snakefall/wiki/">community made levels</a>, and share your levels there!</div>
-    <div>Also check out the <a href="https://karoo13.github.io/snakefall/patashu-remix/">experimental version</a> of this game.</div>
+    <div>Also check out the <a href="https://karoo13.github.io/snakefall/patashu-remix/">experimental version</a> with more puzzle elements.</div>
     <div>This game is a clone of <a href="https://store.steampowered.com/app/357300/Snakebird/">Snakebird</a> by Noumenon Games.</div>
-    <script src="version.js"></script>
     <script src="a.js"></script>
   </body>
 </html>

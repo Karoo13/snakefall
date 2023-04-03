@@ -1,44 +1,54 @@
 <html>
   <head>
     <title>Snakefall</title>
+    <style>
+      @keyframes click_me {
+        0%   { background-color: buttonface; }
+        50%  { background-color: yellow; }
+        100% { background-color: buttonface; }
+      }
+      button.click-me {
+        animation: click_me 2s 2 alternate;
+        font-weight: bold;
+      }
+    </style>
   </head>
   <body>
     <table style="margin:0px auto;"><tr>
       <td><canvas id="canvas" width=750 height=600></canvas></td>
       <td id="editorPane" style="display:none;">
         <table>
-          <tr><td><input type="button" id="playtestButton" value="PLAYTEST!" title="P - Anchors the Restart state."></td></tr>
+          <tr><td><button id="saveLevelButton" title="Ctrl+Shift+S - saves the current state to the URL bar of your browser; clears move history">Save Level</button></td></tr>
           <tr><td style="text-align:center;">
-            <input type="button" id="uneditButton" value="Unedit <<" title="Ctrl+Z" disabled>
-            <input type="button" id="reeditButton" value=">> Re-edit" title="Ctrl+Shift+Z, Ctrl+Y" disabled><br>
+            <button id="uneditButton" title="Ctrl+Z" disabled>Unedit &lt;&lt;</button>
+            <button id="reeditButton" title="Ctrl+Shift+Z, Ctrl+Y" disabled>&gt;&gt; Re-edit</button><br>
             Edits: <span id="editsSpan">0+0</span>
           </td></tr>
-          <tr><td><input type="button" id="saveLevelButton" value="Save Level" title="Ctrl+S - puts the share link in the URL bar of your browser"></td></tr>
-          <tr><td><input type="button" id="resizeButton" value="Resize" title="Shift+S"></td></tr>
+          <tr><td><button id="resizeButton" title="Shift+">Resize</button></td></tr>
           <tr><td>
-            <input type="button" id="selectButton" value="Select" title="Shift+R - double click to edit objects"><br>
-            <input type="button" id="cutButton" value="X" title="Cut (Ctrl+X)" disabled><input type="button" id="copyButton" value="C" title="Copy (Ctrl+C)" disabled><input type="button" id="pasteButton" value="V" title="Paste (Ctrl+V)" disabled>
+            <button id="selectButton" title="Shift+S">Select</button><br>
+            <button id="cutButton" title="Cut (Ctrl+X)" disabled>X</button><button id="copyButton" title="Copy (Ctrl+C)" disabled>C</button><button id="pasteButton" title="Paste (Ctrl+V)" disabled>V</button>
           </td></tr>
-          <tr><td><input type="button" id="paintSpaceButton" value="Erase" title="E"></td></tr>
-          <tr><td><input type="button" id="paintWallButton" value="Wall" title="W"></td></tr>
-          <tr><td><input type="button" id="paintSpikeButton" value="Spike" title="S"></td></tr>
-          <tr><td><input type="button" id="paintExitButton" value="Exit" title="X"></td></tr>
-          <tr><td><input type="button" id="paintFruitButton" value="Fruit" title="F"></td></tr>
-          <tr><td><input type="button" id="paintPortalButton" value="Portal" title="A"></td></tr>
-          <tr><td><input type="button" id="paintSnakeButton" value="Snake" title="D"></td></tr>
-          <tr><td><input type="button" id="paintBlockButton" value="Block" title="B"></td></tr>
-          <tr><td><input type="button" id="paintPlatformButton" value="Platform" title="L"></td></tr>
-          <!-- <tr><td><input type="button" id="paintPlatformUButton" value="PlatformU"></td></tr> -->
-          <tr><td><input type="button" id="paintPlatformDButton" value="PlatformD"></td></tr>
-          <tr><td><input type="button" id="paintPlatformLButton" value="PlatformL"></td></tr>
-          <tr><td><input type="button" id="paintPlatformRButton" value="PlatformR"></td></tr>
-          <tr><td><input type="button" id="paintWoodPlatformButton" value="WoodPlatform"></td></tr>
-          <tr><td><input type="button" id="paintDiggableDirtButton" value="DiggableDirt"></td></tr>
-          <tr><td><input type="button" id="paintFoamButton" value="Foam"></td></tr>
-          <tr><td><input type="button" id="paintOpenGateButton" value="OpenGate"></td></tr>
-          <tr><td><input type="button" id="paintClosedGateButton" value="ClosedGate"></td></tr>
-          <tr><td><input type="button" id="cheatGravityButton" value="Gravity: ON" title="Shift+G"></td></tr>
-          <tr><td><input type="button" id="cheatCollisionButton" value="Collision: ON" title="Shift+C"></td></tr>
+          <tr><td><button id="paintSpaceButton" title="E">Erase</button></td></tr>
+          <tr><td><button id="paintWallButton" title="W">Wall</button></td></tr>
+          <tr><td><button id="paintSpikeButton" title="S">Spike</button></td></tr>
+          <tr><td><button id="paintExitButton" title="X">Exit</button></td></tr>
+          <tr><td><button id="paintFruitButton" title="F">Fruit</button></td></tr>
+          <tr><td><button id="paintPortalButton" title="P">Portal</button></td></tr>
+          <tr><td><button id="paintSnakeButton" title="N - select again to change color">Snake</button></td></tr>
+          <tr><td><button id="paintBlockButton" title="B - select again to finish placing">Block</button></td></tr>
+          <!-- <tr><td><button id="paintPlatformButton" title="U - solid to the edges of snakes and blocks">Platform</button></td></tr> -->
+          <tr><td><button id="paintPlatformUButton" title="U - solid to the edges of snakes and blocks">PlatformU</button></td></tr>
+          <tr><td><button id="paintPlatformDButton" title="H - solid to the edges of snakes and blocks">PlatformD</button></td></tr>
+          <tr><td><button id="paintPlatformLButton" title="J - solid to the edges of snakes and blocks">PlatformL</button></td></tr>
+          <tr><td><button id="paintPlatformRButton" title="K - solid to the edges of snakes and blocks">PlatformR</button></td></tr>
+          <tr><td><button id="paintWoodPlatformButton" title="Shift+U - can be pushed through">WoodPlatform</button></td></tr>
+          <tr><td><button id="paintDiggableDirtButton" title="D - can be dug like fruit">DiggableDirt</button></td></tr>
+          <tr><td><button id="paintFoamButton" title="Shift+D - can be pushed or teleported into">Foam</button></td></tr>
+          <tr><td><button id="paintOpenGateButton" title="O - closes when no longer occupied">OpenGate</button></td></tr>
+          <tr><td><button id="paintClosedGateButton" title="Shift+O">ClosedGate</button></td></tr>
+          <tr><td><button id="cheatGravityButton" title="Shift+G">Gravity: ON</button></td></tr>
+          <tr><td><button id="cheatCollisionButton" title="Shift+C">Collision: ON</button></td></tr>
         </table>
       </td>
     </tr></table>
@@ -48,30 +58,29 @@
       Controls (hover for hotkeys):
       <br>
       Arrows<span id="wasdSpan">/WASD</span> to move
-      <input type="button" id="switchSnakesButton" value="Switch Snakes" title="(Shift+)Spacebar, (Shift+)Tab, 1 - Red, 2 - Green, 3 - Blue, 4 - Yellow">
-      <input type="button" id="showGridButton" value="Show Grid" title="G">
-      <input style="display:none" type="button" id="saveProgressButton" value="Save Progress" title="Ctrl+Shift+S - Saves a replay URL to the URL bar of your browser">
+      <button id="switchSnakesButton" title="(Shift+)Spacebar, (Shift+)Tab, or digits">Switch Snakes</button>
+      <button id="showGridButton" title="G">Show Grid</button>
       <br>
-      <input type="button" id="unmoveButton" value="Unmove <<" title="Backspace, Z, Q" disabled>
+      <button id="unmoveButton" title="Backspace, Z, Q" disabled>Unmove &lt;&lt;</button>
       Moves: <span id="movesSpan">0+0</span>
-      <input type="button" id="removeButton" value=">> Re-move" title="Y, Shift+Backspace, Shift+Z, Shift+Q" disabled>
-      <input type="button" id="restartButton" value="Restart" title="R - Unmove all the way. Shift+R - Re-move all the way">
+      <button id="removeButton" title="Y, Shift+Backspace, Shift+Z, Shift+Q" disabled>&gt;&gt; Re-move</button>
+      <button id="restartButton" title="R - unmove to start; Shift+R - re-move to end">Restart</button>
+      <button id="saveProgressButton" title="Ctrl+S - Saves a replay URL to the URL bar of your browser. Use Re-move or Shift+R to restore state.">Save Progress</button>
     </div>
 
-    <input id="showHideEditor" type="button" value="Show Editor Stuff" title="\">
+    <button id="showHideEditor" title="Shift+E">Show Editor</button>
     <div id="editorDiv" style="display:none;">
       <textarea id="serializationTextarea" rows=30 cols=80></textarea>
       <div>
-        <input id="submitSerializationButton" type="button" value="Submit">
+        <button id="submitSerializationButton">Submit</button>
         Share link: <input id="shareLinkTextbox">
       </div>
     </div>
 
     <div style="margin-top:1em;">This project on Github: <a href="https://github.com/Karoo13/snakefall/">Karoo13/snakefall</a> version <span id="versionSpan">???</span></div>
     <div>Check out some <a href="https://github.com/thejoshwolfe/snakefall/wiki/">community made levels</a>, and share your levels there!</div>
-    <div>This is the experimental version featuring a few new elements.</div>
+    <div>This is the experimental version featuring several new elements.</div>
     <div>This game is a clone of <a href="http://snakebird.noumenongames.com/">Snakebird</a> by Noumenon Games.</div>
-    <script src="version.js"></script>
     <script src="a.js"></script>
   </body>
 </html>
