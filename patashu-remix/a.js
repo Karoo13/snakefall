@@ -53,30 +53,31 @@ var magicNumber_v0 = "3tFRIoTU";
 var magicNumber    = "HyRr4JK1";
 var exampleLevel = magicNumber + "&" +
   "17&31" +
-  "?" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000004000" +
-    "00000000000ddd00000000000000000" +
-    "00000uuuuuu00000000000000000000" +
-    "00000000000000000000000o0000000" +
-    "00000000000001100000000o0000000" +
-    "0000000000000111100000000000000" +
-    "0000000000000011000000000000000" +
-    "000000000000001t000010000000000" +
-    "0000000000000t1t100011000000000" +
-    "0000001111111ttt110000010000000" +
-    "000001111111111111111111ff00000" +
-    "000001111111110111111111ff00000" +
-    "000000111111110011111111f000000" +
-    "0000001111111000111111110000000" +
-  "/" +
-  "b0 ?396&397/" +
-  "s4 ?351&350&349/" +
-  "f2 ?163/" +
-  "f1 ?430/" +
-  "f0 ?328/";
+"?" +
+  "0000000000000000000000000000000" +
+  "0000000000000000000000040000000" +
+  "0000000000000000000000000000000" +
+  "00000000000000000000000o0000000" +
+  "00000000000ddd000000000o0000000" +
+  "00000uuuuuu00000000000000000000" +
+  "0000000000000000000000000000000" +
+  "0000000000000110000000000000000" +
+  "0000000000000111100000000000000" +
+  "0000000000000011000010000000000" +
+  "000000000000001t000011000000000" +
+  "0000000000000t1t10000t001000000" +
+  "0000001111111ttt11000t011000000" +
+  "000001111111111111111tt11ff0000" +
+  "0000011111111101111111111ff0000" +
+  "0000001111111100111111111f00000" +
+  "0000001111111000111111111000000" +
+"/" +
+"b0 ?397&398/" +
+"b6 ?392&361/" +
+"s4 ?351&350&349/" +
+"f2 ?163/" +
+"f1 ?431/" +
+"f0 ?328/";
 
 var testLevel_v0 = "3tFRIoTU&5&5?0005*00300024005*001000/b0?7&6&15&23/s3?18/s0?1&0&5/s1?2/s4?10/s2?17/b2?9/b3?14/b4?19/b1?4&20/b5?24/";
 var testLevel_v0_converted = "HyRr4JK1&5&5?0005*4024005*001000/b0?7&6&15&23/s3?18/s0?1&0&5/s1?2/s4?10/s2?17/b2?9/b3?14/b4?19/b1?4&20/b5?24/f0?8/";
@@ -463,7 +464,7 @@ document.addEventListener("keydown", function(event) {
       if ( persistentState.showEditor && modifierMask === CTRL)  { redo(uneditStuff); break; }
       return;
     case "KeyR":
-      if (modifierMask === 0)     { reset(unmoveStuff);  break; }
+      if (modifierMask === 0)     { reset(unmoveStuff); break; }
       if (modifierMask === SHIFT) { unreset(unmoveStuff); break; }
       return;
     case 'KeyE':
@@ -592,7 +593,11 @@ document.getElementById("saveProgressButton").addEventListener("click", function
   saveReplay();
 });
 document.getElementById("restartButton").addEventListener("click", function() {
-  reset(unmoveStuff);
+  if (unmoveStuff.undoStack.length === 0 && unmoveStuff.redoStack.length > 0) {
+    unreset(unmoveStuff);
+  } else {
+    reset(unmoveStuff);
+  }
   render();
 });
 document.getElementById("unmoveButton").addEventListener("click", function() {
@@ -724,7 +729,7 @@ function refreshCheatButtonText() {
 var lastDraggingRowcol = null;
 var hoverLocation = null;
 var draggingChangeLog = null;
-canvas.addEventListener("mousedown", function(event) {
+canvas.addEventListener("pointerdown", function(event) {
   if (event.altKey) return;
   if (event.button !== 0) return;
   event.preventDefault();
@@ -772,7 +777,7 @@ canvas.addEventListener("dblclick", function(event) {
     paintBrushTileCodeChanged();
   }
 });
-document.addEventListener("mouseup", function(event) {
+document.addEventListener("pointerup", function(event) {
   stopDragging();
 });
 function stopDragging() {
@@ -790,7 +795,7 @@ function clampRowcol(rowcol) {
   rowcol.c = clamp(rowcol.c, 0, level.width - 1);
   return rowcol;
 }
-canvas.addEventListener("mousemove", function(event) {
+canvas.addEventListener("pointermove", function(event) {
   if (!persistentState.showEditor) return;
   var location = getLocationFromEvent(event);
   var mouseRowcol = getRowcol(level, location);
@@ -817,7 +822,7 @@ canvas.addEventListener("mousemove", function(event) {
     }
   }
 });
-canvas.addEventListener("mouseout", function() {
+canvas.addEventListener("pointerout", function() {
   if (hoverLocation !== location) {
     // turn off the hover when the mouse leaves
     hoverLocation = null;
@@ -1655,6 +1660,11 @@ function undoStuffChanged(undoStuff) {
   document.getElementById(undoStuff.spanId).textContent = movesText;
   document.getElementById(undoStuff.undoButtonId).disabled = undoStuff.undoStack.length === 0;
   document.getElementById(undoStuff.redoButtonId).disabled = undoStuff.redoStack.length === 0;
+  if (undoStuff.undoStack.length === 0 && undoStuff.redoStack.length > 0) {
+    document.getElementById("restartButton").textContent = "Fast Forward";
+  } else {
+    document.getElementById("restartButton").textContent = "Restart";
+  }
 
   // render paradox display
   var uniqueParadoxes = [];
