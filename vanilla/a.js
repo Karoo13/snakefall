@@ -330,7 +330,7 @@ function parseAndLoadReplay(string) {
 
   // now that the replay was executed successfully, undo it all so that it's available in the redo buffer.
   reset(unmoveStuff);
-  document.getElementById("removeButton").classList.add("click-me");
+  document.getElementById("removeButton").style.fontWeight = "bold";
 }
 
 var currentSerializedLevel;
@@ -687,6 +687,7 @@ var lastDraggingRowcol = null;
 var hoverLocation = null;
 var draggingChangeLog = null;
 canvas.addEventListener("pointerdown", function(event) {
+  if (!event.isPrimary) return;
   if (event.altKey) return;
   if (event.button !== 0) return;
   event.preventDefault();
@@ -709,7 +710,7 @@ canvas.addEventListener("pointerdown", function(event) {
     render();
   }
 });
-canvas.addEventListener("dblclick", function(event) {
+/*canvas.addEventListener("dblclick", function(event) {
   if (event.altKey) return;
   if (event.button !== 0) return;
   event.preventDefault();
@@ -733,7 +734,7 @@ canvas.addEventListener("dblclick", function(event) {
     } else throw unreachable();
     paintBrushTileCodeChanged();
   }
-});
+});*/
 document.addEventListener("pointerup", function(event) {
   stopDragging();
 });
@@ -756,6 +757,7 @@ function clampRowcol(rowcol) {
   return rowcol;
 }
 canvas.addEventListener("pointermove", function(event) {
+  if (!event.isPrimary) return;
   if (!persistentState.showEditor) return;
   var location = getLocationFromEvent(event);
   var mouseRowcol = getRowcol(level, location);
@@ -1587,16 +1589,7 @@ function describe(arg1, arg2) {
     }
   }
   if (arg1 === SNAKE) {
-    var color = (function() {
-      switch (snakeColors[arg2 % snakeColors.length]) {
-        case "#f00": return " (Red)";
-        case "#0f0": return " (Green)";
-        case "#00f": return " (Blue)";
-        case "#ff0": return " (Yellow)";
-        default: throw unreachable();
-      }
-    })();
-    return "Snake " + arg2 + color;
+    return "Snake " + arg2 + " (" + snakeColorNames[arg2 % snakeColorNames.length] + ")";
   }
   if (arg1 === BLOCK) {
     return "Block " + arg2;
@@ -1641,8 +1634,8 @@ function undoStuffChanged(undoStuff) {
 
   updateDirtyState();
 
-  if (unmoveStuff.redoStack.length === 0) {
-    document.getElementById("removeButton").classList.remove("click-me");
+  if (undoStuff.undoStack.length > 0 || unmoveStuff.redoStack.length === 0) {
+    document.getElementById("removeButton").style.fontWeight = "normal";
   }
 }
 
@@ -1668,10 +1661,10 @@ function updateDirtyState() {
   saveLevelButton.disabled = dirtyState === CLEAN_NO_TIMELINES;
   if (dirtyState >= EDITOR_DIRTY) {
     // you should save
-    saveLevelButton.classList.add("click-me");
+    saveLevelButton.style.fontWeight = "bold";
     saveLevelButton.textContent = "*" + "Save Level";
   } else {
-    saveLevelButton.classList.remove("click-me");
+    saveLevelButton.style.fontWeight = "normal";
     saveLevelButton.textContent = "Save Level";
   }
 
@@ -2155,6 +2148,12 @@ var snakeColors = [
   "#0f0",
   "#00f",
   "#ff0",
+];
+var snakeColorNames = [
+  "Red",
+  "Green",
+  "Blue",
+  "Yellow",
 ];
 var blockForeground = ["#de5a6d","#fa65dd","#c367e3","#9c62fa","#625ff0"];
 var blockBackground = ["#853641","#963c84","#753d88","#5d3a96","#3a3990"];
