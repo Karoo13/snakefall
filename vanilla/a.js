@@ -649,6 +649,9 @@ document.getElementById("reeditButton").addEventListener("click", function() {
 document.getElementById("saveLevelButton").addEventListener("click", function() {
   saveLevel();
 });
+document.getElementById("selectAllButton").addEventListener("click", function() {
+  selectAll();
+});
 document.getElementById("copyButton").addEventListener("click", function() {
   copySelection();
 });
@@ -732,6 +735,9 @@ canvas.addEventListener("dblclick", function(event) {
   }
 });
 document.addEventListener("pointerup", function(event) {
+  stopDragging();
+});
+document.addEventListener("pointercancel", function(event) {
   stopDragging();
 });
 function stopDragging() {

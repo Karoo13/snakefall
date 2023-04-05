@@ -1,47 +1,36 @@
 <html>
   <head>
     <title>Snakefall</title>
-    <style>
-      @keyframes click_me {
-        0%   { background-color: buttonface; }
-        50%  { background-color: yellow; }
-        100% { background-color: buttonface; }
-      }
-      button.click-me {
-        animation: click_me 2s 2 alternate;
-        font-weight: bold;
-      }
-    </style>
   </head>
-  <body>
+  <body style="touch-action: manipulation;">
     <table style="margin:0px auto;"><tr>
-      <td><canvas id="canvas" width=750 height=600></canvas></td>
+      <td><canvas id="canvas" width=750 height=600 style="touch-action: pinch-zoom;"></canvas></td>
       <td id="editorPane" style="display:none;">
         <table>
-          <tr><td><button id="saveLevelButton" title="Ctrl+Shift+S - save the current state to the browser URL bar, clears move history">Save Level</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="saveLevelButton" title="Ctrl+Shift+S - save the current state to the browser URL bar, clears move history">Save Level</button></td></tr>
           <tr><td>
-            <button id="uneditButton" title="Ctrl+Z" disabled>Unedit &lt;&lt;</button>
-            <button id="reeditButton" title="Ctrl+Shift+Z, Ctrl+Y" disabled>&gt;&gt; Re-edit</button><br>
+            <button onpointerdown="event.preventDefault();" id="uneditButton" title="Ctrl+Z" disabled>Unedit &lt;&lt;</button>
+            <button onpointerdown="event.preventDefault();" id="reeditButton" title="Ctrl+Shift+Z, Ctrl+Y" disabled>&gt;&gt; Re-edit</button><br>
             Edits: <span id="editsSpan">0+0</span>
           </td></tr>
           <tr><td>
-            <button id="resizeUButton" title="A - drag grid to add rows/cols">Grow</button>
-            <button id="resizeDButton" title="Shift+A - drag grid to remove rows/cols">Shrink</button>
+            <button onpointerdown="event.preventDefault();" id="resizeUButton" title="A - drag grid to add rows/cols">Grow</button>
+            <button onpointerdown="event.preventDefault();" id="resizeDButton" title="Shift+A - drag grid to remove rows/cols">Shrink</button>
           </td></tr>
           <tr><td>
-            <button id="selectButton" title="Shift+S">Select</button><br>
-            <button id="cutButton" title="Cut (Ctrl+X)" disabled>X</button><button id="copyButton" title="Copy (Ctrl+C)" disabled>C</button><button id="pasteButton" title="Paste (Ctrl+V)" disabled>V</button>
+            <button onpointerdown="event.preventDefault();" id="selectButton" title="Shift+S - select an area, then cut, copy, delete or fill">Select</button><button onpointerdown="event.preventDefault();" id="selectAllButton" title="Ctrl+A - select all">A</button><br>
+            <button onpointerdown="event.preventDefault();" id="cutButton" title="Ctrl+X - cut selection" disabled>X</button><button onpointerdown="event.preventDefault();" id="copyButton" title="Ctrl+C - copy selection" disabled>C</button><button onpointerdown="event.preventDefault();" id="pasteButton" title="Ctrl+V - paste selection" disabled>V</button>
           </td></tr>
-          <tr><td><button id="paintSpaceButton" title="E">Erase</button></td></tr>
-          <tr><td><button id="paintWallButton" title="W">Wall</button></td></tr>
-          <tr><td><button id="paintSpikeButton" title="S">Spike</button></td></tr>
-          <tr><td><button id="paintExitButton" title="X">Exit</button></td></tr>
-          <tr><td><button id="paintFruitButton" title="F">Fruit</button></td></tr>
-          <tr><td><button id="paintPortalButton" title="P">Portal</button></td></tr>
-          <tr><td><button id="paintSnakeButton" title="N - select again to change color">Snake</button></td></tr>
-          <tr><td><button id="paintBlockButton" title="B - select again to finish placing">Block</button></td></tr>
-          <tr><td><button id="cheatGravityButton" title="Shift+G">Gravity: ON</button></td></tr>
-          <tr><td><button id="cheatCollisionButton" title="Shift+C">Collision: ON</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintSpaceButton" title="E, Delete">Erase</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintWallButton" title="W">Wall</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintSpikeButton" title="S">Spike</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintExitButton" title="X">Exit</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintFruitButton" title="F">Fruit</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintPortalButton" title="P">Portal</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintSnakeButton" title="N - select again to change color">Snake</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintBlockButton" title="B - select again to finish placing">Block</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="cheatGravityButton" title="Shift+G">Gravity: ON</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="cheatCollisionButton" title="Shift+C">Collision: ON</button></td></tr>
         </table>
       </td>
     </tr></table>
@@ -50,26 +39,30 @@
       <tr><td>
         <div id="paradoxDiv" style="background:#f88;"></div>
         Arrows<span id="wasdSpan">/WASD</span> to move
-        <button id="switchSnakesButton" title="(Shift+)Spacebar, (Shift+)Tab, or digits">Switch Snakes</button>
-        <button id="showGridButton" title="G">Show Grid</button>
+        <button onpointerdown="event.preventDefault();" id="switchSnakesButton" title="(Shift+)Spacebar, (Shift+)Tab, or digits">Switch Snakes</button>
+        <button onpointerdown="event.preventDefault();" id="showGridButton" title="G">Show Grid</button>
       </td></tr>
       <tr><td>
-        <button id="unmoveButton" title="Backspace, Z, Q" disabled>Unmove &lt;&lt;</button>
+        <button onpointerdown="event.preventDefault();" id="unmoveButton" title="Backspace, Z, Q" disabled>Unmove &lt;&lt;</button>
         Moves: <span id="movesSpan">0+0</span>
-        <button id="removeButton" title="Y, Shift+Backspace, Shift+Z, Shift+Q" disabled>&gt;&gt; Re-move</button>
-        <button id="restartButton" title="R - unmove to beginning, Shift+R - re-move to end">Restart</button>
-        <button id="saveProgressButton" title="Ctrl+S - save past moves to the browser URL bar, can not save if editor tools were used since the last level save">Save Progress</button>
+        <button onpointerdown="event.preventDefault();" id="removeButton" title="Y, Shift+Backspace, Shift+Z, Shift+Q" disabled>&gt;&gt; Re-move</button>
+        <button onpointerdown="event.preventDefault();" id="restartButton" title="R - unmove to beginning, Shift+R - re-move to end">Restart</button>
+        <button onpointerdown="event.preventDefault();" id="saveProgressButton" title="Ctrl+S - save past moves to the browser URL bar, can not save if editor tools were used since the last level save">Save Progress</button>
       </td></tr>
     </table>
 
-    <button id="showHideEditor" title="Shift+E">Show Editor</button>
-    <div id="editorDiv" style="display:none;">
-      <textarea id="serializationTextarea" rows=30 cols=80></textarea>
-      <div>
-        <button id="submitSerializationButton">Submit</button>
-        Share link: <input id="shareLinkTextbox">
-      </div>
-    </div>
+    <table>
+      <tr><td><button onpointerdown="event.preventDefault();" id="showHideEditor" title="Shift+E">Show Editor</button></td></tr>
+      <tr><td>
+        <div id="editorDiv" style="display:none;">
+          <textarea id="serializationTextarea" rows=30 cols=80></textarea>
+          <div>
+            <button onpointerdown="event.preventDefault();" id="submitSerializationButton" title="submit the text-representation of a level">Submit</button>
+            Share link: <input id="shareLinkTextbox">
+          </div>
+        </div>
+      </td></tr>
+    </table>
 
     <div style="margin-top:1em;">This project on Github: <a href="https://github.com/Karoo13/snakefall/">Karoo13/snakefall</a> version <span id="versionSpan">???</span></div>
     <div>Check out some <a href="https://github.com/thejoshwolfe/snakefall/wiki/">community made levels</a>, and share your levels there!</div>

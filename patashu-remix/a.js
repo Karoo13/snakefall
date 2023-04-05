@@ -695,6 +695,9 @@ document.getElementById("reeditButton").addEventListener("click", function() {
 document.getElementById("saveLevelButton").addEventListener("click", function() {
   saveLevel();
 });
+document.getElementById("selectAllButton").addEventListener("click", function() {
+  selectAll();
+});
 document.getElementById("copyButton").addEventListener("click", function() {
   copySelection();
 });
@@ -778,6 +781,9 @@ canvas.addEventListener("dblclick", function(event) {
   }
 });
 document.addEventListener("pointerup", function(event) {
+  stopDragging();
+});
+document.addEventListener("pointercancel", function(event) {
   stopDragging();
 });
 function stopDragging() {
@@ -1238,8 +1244,8 @@ function paintAtLocation(location, changeLog) {
       }
     }
 
-    // make sure there's space behind us
-    if (!isTileCodeCoverable(level.map[location])) {
+    // make sure there's space behind us, exclude opengate for clarity
+    if (!isTileCodeCoverable(level.map[location]) || level.map[location] === OPENGATE) {
       paintTileAtLocation(location, SPACE, changeLog);
     }
     removeAnyObjectAtLocation(location, changeLog);
@@ -1260,8 +1266,8 @@ function paintAtLocation(location, changeLog) {
       paintBrushBlockId = objectHere.id;
     } else {
       // make a change
-      // make sure there's space behind us
-      if (!isTileCodeCoverable(level.map[location])) {
+      // make sure there's space behind us, exclude opengate for clarity
+      if (!isTileCodeCoverable(level.map[location]) || level.map[location] === OPENGATE) {
         paintTileAtLocation(location, SPACE, changeLog);
       }
       var thisBlock = null;
