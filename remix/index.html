@@ -30,6 +30,14 @@
           <tr><td><button onpointerdown="event.preventDefault();" id="paintPortalButton" title="P">Portal</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="paintSnakeButton" title="N - select again to change color">Snake</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="paintBlockButton" title="B - select again to finish placing">Block</button></td></tr>
+          <!-- <tr><td><button onpointerdown="event.preventDefault();" id="paintPlatformButton" title="U - solid to the edges of snakes and blocks">Platform</button></td></tr> -->
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintPlatformUButton" title="U - solid to the edges of snakes and blocks">PlatformU</button><br>
+          <button onpointerdown="event.preventDefault();" id="paintPlatformDButton" title="PlatformL (H)">D</button><button onpointerdown="event.preventDefault();" id="paintPlatformLButton" title="PlatformD (J)">L</button><button onpointerdown="event.preventDefault();" id="paintPlatformRButton" title="PlatformR (K)">R</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintWoodPlatformButton" title="Shift+U - platform that can be pushed through">WoodPlatform</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintDiggableDirtButton" title="D - can be dug through like fruit">Dirt</button>
+          <button onpointerdown="event.preventDefault();" id="paintFoamButton" title="Shift+D - can be pushed or teleported into">Foam</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintOpenGateButton" title="O - closes when no longer occupied">OpenGate</button><br>
+          <button onpointerdown="event.preventDefault();" id="paintClosedGateButton" title="Shift+O - behaves like a wall">ClosedGate</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="cheatGravityButton" title="Shift+G">Gravity: ON</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="cheatCollisionButton" title="Shift+C">Collision: ON</button></td></tr>
         </table>
@@ -38,18 +46,18 @@
 
     <table style="margin:0px auto; text-align:center;">
       <tr><td>
-        <div id="paradoxDiv" style="background:#f88;"></div>
-        Arrows<span id="wasdSpan">/WASD</span> to move
+      <div id="paradoxDiv" style="background:#f88;"></div>
+      Arrows<span id="wasdSpan">/WASD</span> to move
         <button onpointerdown="event.preventDefault();" id="switchSnakesButton" title="(Shift+)Spacebar, (Shift+)Tab, digits or click while not editing">Switch Snakes</button>
-        <button onpointerdown="event.preventDefault();" id="showGridButton" title="G">Show Grid</button>
+      <button onpointerdown="event.preventDefault();" id="showGridButton" title="G">Show Grid</button>
         <button onpointerdown="event.preventDefault();" id="touchControlsButton" title="enable an overlay for touch devices">Touch Input</button>
       </td></tr>
       <tr><td>
-        <button onpointerdown="event.preventDefault();" id="unmoveButton" title="Backspace, Z, Q" disabled>Unmove &lt;&lt;</button>
-        Moves: <span id="movesSpan">0+0</span>
-        <button onpointerdown="event.preventDefault();" id="removeButton" title="Y, Shift+Backspace, Shift+Z, Shift+Q" disabled>&gt;&gt; Re-move</button>
-        <button onpointerdown="event.preventDefault();" id="restartButton" title="R - unmove to beginning, Shift+R - re-move to end">Restart</button>
-        <button onpointerdown="event.preventDefault();" id="saveProgressButton" title="Ctrl+S - save past moves to the browser URL bar, can not save if editor tools were used since the last level save">Save Progress</button>
+      <button onpointerdown="event.preventDefault();" id="unmoveButton" title="Backspace, Z, Q" disabled>Unmove &lt;&lt;</button>
+      Moves: <span id="movesSpan">0+0</span>
+      <button onpointerdown="event.preventDefault();" id="removeButton" title="Y, Shift+Backspace, Shift+Z, Shift+Q" disabled>&gt;&gt; Re-move</button>
+      <button onpointerdown="event.preventDefault();" id="restartButton" title="R - unmove to beginning, Shift+R - re-move to end">Restart</button>
+      <button onpointerdown="event.preventDefault();" id="saveProgressButton" title="Ctrl+S - save past moves to the browser URL bar, can not save if editor tools were used since the last level save">Save Progress</button>
       </td></tr>
     </table>
 
@@ -68,9 +76,9 @@
 
     <div style="margin-top:1em;">This project on Github: <a href="https://github.com/Karoo13/snakefall/">Karoo13/snakefall</a> version <span id="versionSpan">???</span></div>
     <div>Check out some <a href="https://github.com/thejoshwolfe/snakefall/wiki/">community made levels</a>, and share your levels there!</div>
-    <div>Also check out the <a href="https://karoo13.github.io/snakefall/remix/">enhanced version</a> with more puzzle elements.</div>
+    <div>This is the enhanced version featuring several new puzzle elements.</div>
     <div>This game is a clone of <a href="https://store.steampowered.com/app/357300/Snakebird/">Snakebird</a> by Noumenon Games.</div>
-
+    
     <div id="visualViewportMirror" style="position:fixed; visibility:hidden; font-size:3vh">
       <div id="touchControls" onselectstart="event.preventDefault();" oncontextmenu="event.preventDefault();" style="touch-action:pan-x pan-y; position:absolute; top:52%; left:0%; bottom:0%; right:0%; visibility:hidden;">
         <div style="position:absolute; top:0%; left:-50%; bottom:-50%; right:-50%; background-color:#0009;"></div>

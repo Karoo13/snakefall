@@ -1,17 +1,27 @@
 function unreachable() { return new Error("unreachable"); }
 if (typeof VERSION === "undefined") {
-  document.getElementById("versionSpan").innerHTML = "v.1.3";
+  document.getElementById("versionSpan").innerHTML = "p.1.3";
 }
 var canvas = document.getElementById("canvas");
 
 // tile codes
-var SPACE = 0;
-var WALL = 1;
-var SPIKE = 2;
-var FRUIT_v0 = 3; // legacy
-var EXIT = 4;
-var PORTAL = 5;
-var validTileCodes = [SPACE, WALL, SPIKE, EXIT, PORTAL];
+var SPACE = "0".charCodeAt(0);
+var WALL = "1".charCodeAt(0);
+var SPIKE = "2".charCodeAt(0);
+var FRUIT_v0 = "3".charCodeAt(0); // legacy
+var EXIT = "4".charCodeAt(0);
+var PORTAL = "5".charCodeAt(0);
+var PLATFORM = "6".charCodeAt(0); // legacy
+var PLATFORMU = "u".charCodeAt(0);
+var PLATFORMD = "d".charCodeAt(0);
+var PLATFORML = "l".charCodeAt(0);
+var PLATFORMR = "r".charCodeAt(0);
+var WOODPLATFORM = "w".charCodeAt(0);
+var FOAM = "f".charCodeAt(0);
+var DIGGABLEDIRT = "t".charCodeAt(0);
+var OPENGATE = "o".charCodeAt(0);
+var CLOSEDGATE = "c".charCodeAt(0);
+var validTileCodes = [SPACE, WALL, SPIKE, FRUIT, EXIT, PORTAL, PLATFORM, PLATFORMU, PLATFORMD, PLATFORML, PLATFORMR, WOODPLATFORM, FOAM, DIGGABLEDIRT, OPENGATE, CLOSEDGATE];
 
 // object types
 var SNAKE = "s";
@@ -43,28 +53,31 @@ var magicNumber_v0 = "3tFRIoTU";
 var magicNumber    = "HyRr4JK1";
 var exampleLevel = magicNumber + "&" +
   "17&31" +
-  "?" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000040000000000" +
-    "0000000000000110000000000000000" +
-    "0000000000000111100000000000000" +
-    "0000000000000011000000000000000" +
-    "0000000000000010000010000000000" +
-    "0000000000000010100011000000000" +
-    "0000001111111000110000000110000" +
-    "0000011111111111111111111110000" +
-    "0000011111111101111111111100000" +
-    "0000001111111100111111111100000" +
-    "0000001111111000111111111100000" +
-  "/" +
-  "s0 ?351&350&349/" +
-  "f0 ?328/" +
-  "f1 ?366/";
+"?" +
+  "0000000000000000000000000000000" +
+  "0000000000000000000000040000000" +
+  "0000000000000000000000000000000" +
+  "00000000000000000000000o0000000" +
+  "00000000000ddd000000000o0000000" +
+  "00000uuuuuu00000000000000000000" +
+  "0000000000000000000000000000000" +
+  "0000000000000110000000000000000" +
+  "0000000000000111100000000000000" +
+  "0000000000000011000010000000000" +
+  "000000000000001t000011000000000" +
+  "0000000000000t1t10000t001000000" +
+  "0000001111111ttt11000t011000000" +
+  "000001111111111111111tt11ff0000" +
+  "0000011111111101111111111ff0000" +
+  "0000001111111100111111111f00000" +
+  "0000001111111000111111111000000" +
+"/" +
+"b0 ?397&398/" +
+"b6 ?392&361/" +
+"s4 ?351&350&349/" +
+"f2 ?163/" +
+"f1 ?431/" +
+"f0 ?328/";
 
 var testLevel_v0 = "3tFRIoTU&5&5?0005*00300024005*001000/b0?7&6&15&23/s3?18/s0?1&0&5/s1?2/s4?10/s2?17/b2?9/b3?14/b4?19/b1?4&20/b5?24/";
 var testLevel_v0_converted = "HyRr4JK1&5&5?0005*4024005*001000/b0?7&6&15&23/s3?18/s0?1&0&5/s1?2/s4?10/s2?17/b2?9/b3?14/b4?19/b1?4&20/b5?24/f0?8/";
@@ -101,7 +114,7 @@ function parseLevel(string) {
   var upconvertedObjects = [];
   var fruitCount = 0;
   for (var i = 0; i < mapData.length; i++) {
-    var tileCode = mapData[i].charCodeAt(0) - "0".charCodeAt(0);
+    var tileCode = mapData[i].charCodeAt(0);
     if (tileCode === FRUIT_v0 && versionTag === magicNumber_v0) {
       // fruit used to be a tile code. now it's an object.
       upconvertedObjects.push({
@@ -191,13 +204,17 @@ function parseLevel(string) {
   }
 }
 
+function serializeTileCode(tileCode) {
+  return String.fromCharCode(tileCode);
+}
+
 function stringifyLevel(level) {
   var output = magicNumber + "&";
   output += level.height + "&" + level.width + "\n";
 
   output += "?\n";
   for (var r = 0; r < level.height; r++) {
-    output += "  " + level.map.slice(r * level.width, (r + 1) * level.width).join("") + "\n";
+    output += "  " + level.map.slice(r * level.width, (r + 1) * level.width).map(serializeTileCode).join("") + "\n";
   }
   output += "/\n";
 
@@ -476,6 +493,8 @@ document.addEventListener("keydown", function(event) {
       return;
     case "KeyD":
       if (!persistentState.showEditor && modifierMask === 0)     { move(0, 1); break; }
+      if ( persistentState.showEditor && modifierMask === 0)     { setPaintBrushTileCode(DIGGABLEDIRT); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode(FOAM); break; }
       return;
     case "KeyX":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(EXIT); break; }
@@ -492,6 +511,23 @@ document.addEventListener("keydown", function(event) {
       return;
     case "KeyB":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(BLOCK); break; }
+      return;
+    case "KeyU":
+      if ( persistentState.showEditor && modifierMask === 0)     { setPaintBrushTileCode(PLATFORMU); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode(WOODPLATFORM); break; }
+      return;
+    case "KeyH":
+      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(PLATFORML); break; }
+      return;
+    case "KeyJ":
+      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(PLATFORMD); break; }
+      return;
+    case "KeyK":
+      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(PLATFORMR); break; }
+      return;
+    case "KeyO":
+      if ( persistentState.showEditor && modifierMask === 0)     { setPaintBrushTileCode(OPENGATE); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode(CLOSEDGATE); break; }
       return;
     case "KeyC":
       if ( persistentState.showEditor && modifierMask === SHIFT) { toggleCollision(); break; }
@@ -628,6 +664,16 @@ var paintButtonIdAndTileCodes = [
   ["paintExitButton", EXIT],
   ["paintFruitButton", FRUIT],
   ["paintPortalButton", PORTAL],
+  //["paintPlatformButton", PLATFORM],
+  ["paintPlatformUButton", PLATFORMU],
+  ["paintPlatformDButton", PLATFORMD],
+  ["paintPlatformLButton", PLATFORML],
+  ["paintPlatformRButton", PLATFORMR],
+  ["paintWoodPlatformButton", WOODPLATFORM],
+  ["paintFoamButton", FOAM],
+  ["paintDiggableDirtButton", DIGGABLEDIRT],
+  ["paintOpenGateButton", OPENGATE],
+  ["paintClosedGateButton", CLOSEDGATE],
   ["paintSnakeButton", SNAKE],
   ["paintBlockButton", BLOCK],
 ];
@@ -1200,8 +1246,10 @@ function paintAtLocation(location, changeLog) {
       }
     }
 
-    // make sure there's space behind us
-    paintTileAtLocation(location, SPACE, changeLog);
+    // make sure there's space behind us, exclude opengate for clarity
+    if (!isTileCodeCoverable(level.map[location]) || level.map[location] === OPENGATE) {
+      paintTileAtLocation(location, SPACE, changeLog);
+    }
     removeAnyObjectAtLocation(location, changeLog);
     if (paintBrushObject == null) {
       var thereWereNoSnakes = countSnakes() === 0;
@@ -1220,8 +1268,10 @@ function paintAtLocation(location, changeLog) {
       paintBrushBlockId = objectHere.id;
     } else {
       // make a change
-      // make sure there's space behind us
-      paintTileAtLocation(location, SPACE, changeLog);
+      // make sure there's space behind us, exclude opengate for clarity
+      if (!isTileCodeCoverable(level.map[location]) || level.map[location] === OPENGATE) {
+        paintTileAtLocation(location, SPACE, changeLog);
+      }
       var thisBlock = null;
       if (paintBrushBlockId != null) {
         thisBlock = findBlockById(paintBrushBlockId);
@@ -1254,7 +1304,10 @@ function paintAtLocation(location, changeLog) {
       delete blockSupportRenderCache[thisBlock.id];
     }
   } else if (paintBrushTileCode === FRUIT) {
-    paintTileAtLocation(location, SPACE, changeLog);
+    // fruit covers other coverable tiles too much, can be achieved manually
+    if (!isTileCodePlatform(level.map[location])) {
+      paintTileAtLocation(location, SPACE, changeLog);
+    }
     removeAnyObjectAtLocation(location, changeLog);
     var object = newFruit(location)
     level.objects.push(object);
@@ -1749,9 +1802,17 @@ function move(dr, dc) {
   var ate = false;
   var pushedObjects = [];
 
+  //track OpenGates that had objects on them
+  var occupiedOpenGates = getOccupiedOpenGateLocations();
+
   if (isCollision()) {
     var newTile = level.map[newLocation];
-    if (!isTileCodeAir(newTile)) return; // can't go through that tile
+    if (newTile === DIGGABLEDIRT || newTile === FOAM) {
+      // dig
+      paintTileAtLocation(newLocation, SPACE, changeLog);
+      newTile = level.map[newLocation];
+    }
+    if (!isTileCodeAir(activeSnake, null, newTile, dr, dc)) return; // can't go through that tile
     var otherObject = findObjectAtLocation(newLocation);
     if (otherObject != null) {
       if (otherObject === activeSnake) return; // can't push yourself
@@ -1806,6 +1867,8 @@ function move(dr, dc) {
   moveObjects(pushedObjects, dr, dc, portalLocations, portalActivationLocations, changeLog, slitherAnimations);
   animationQueue.push(slitherAnimations);
 
+  occupiedOpenGates = combineOldAndNewGateOccupations(occupiedOpenGates);
+
   // gravity loop
   var stateToAnimationIndex = {};
   if (isGravity()) for (var fallHeight = 1;; fallHeight++) {
@@ -1849,6 +1912,9 @@ function move(dr, dc) {
         }
       }
     }
+
+    occupiedOpenGates = combineOldAndNewGateOccupations(occupiedOpenGates);
+    occupiedOpenGates = closeGates(occupiedOpenGates, changeLog); // gates now close before first fall step
 
     // fall
     var dyingObjects = [];
@@ -1902,6 +1968,23 @@ function move(dr, dc) {
   render();
 }
 
+function combineOldAndNewGateOccupations(oldOccupiedOpenGates)
+{
+  var newOccupiedOpenGates = getOccupiedOpenGateLocations();
+  var newlyOccupiedOpenGates = getSetSubtract(newOccupiedOpenGates, oldOccupiedOpenGates);
+  return oldOccupiedOpenGates.concat(newlyOccupiedOpenGates);
+}
+
+function closeGates(oldOccupiedOpenGates, changeLog)
+{
+  var newOccupiedOpenGates = getOccupiedOpenGateLocations();
+  var nowUnoccupiedOpenGates = getSetSubtract(oldOccupiedOpenGates, newOccupiedOpenGates);
+  for (var i = 0; i < nowUnoccupiedOpenGates.length; i++) {
+    paintTileAtLocation(nowUnoccupiedOpenGates[i], CLOSEDGATE, changeLog);
+  }
+  return newOccupiedOpenGates;
+}
+
 function checkMovement(pusher, pushedObject, dr, dc, pushedObjects, dyingObjects) {
   // pusher can be null (for gravity)
   pushedObjects.push(pushedObject);
@@ -1924,6 +2007,19 @@ function checkMovement(pusher, pushedObject, dr, dc, pushedObjects, dyingObjects
         }
       }
       var forwardLocation = getLocation(level, forwardRowcol.r, forwardRowcol.c);
+      if (isTileCodePlatform(level.map[forwardLocation]) && !isTileCodeAir(pusher, pushedObject, level.map[forwardLocation], dr, dc)) {
+        // this platform holds us, unless we're going through it
+        var neighborLocations;
+        if (pushedObject.type === SNAKE) {
+          neighborLocations = [];
+          if (j > 0) neighborLocations.push(pushedObject.locations[j - 1]);
+          if (j < pushedObject.locations.length - 1) neighborLocations.push(pushedObject.locations[j + 1]);
+        } else if (pushedObject.type === BLOCK) {
+          neighborLocations = pushedObject.locations;
+        } else throw unreachable();
+        if (neighborLocations.indexOf(forwardLocation) === -1) return false; // flat surface
+        // we slip right past it
+      }
       var yetAnotherObject = findObjectAtLocation(forwardLocation);
       if (yetAnotherObject != null) {
         if (yetAnotherObject.type === FRUIT) {
@@ -1952,16 +2048,15 @@ function checkMovement(pusher, pushedObject, dr, dc, pushedObjects, dyingObjects
     // but that means the tile must be air,
     // and we already know pushing that object.
     var tileCode = level.map[forwardLocation];
-    if (!isTileCodeAir(tileCode)) {
-      if (dyingObjects != null) {
-        if (tileCode === SPIKE) {
+    var object = findObjectAtLocation(offsetLocation(forwardLocation, -dr, -dc));
+    if (!isTileCodeAir(pusher, object, tileCode, dr, dc)) {
+      if (tileCode === SPIKE && dyingObjects != null) {
           // uh... which object was this again?
           var deadObject = findObjectAtLocation(offsetLocation(forwardLocation, -dr, -dc));
           if (deadObject.type === SNAKE) {
             // ouch!
             addIfNotPresent(dyingObjects, deadObject);
             continue;
-          }
         }
       }
       // can't push into something solid
@@ -1984,6 +2079,10 @@ function moveObjects(objects, dr, dc, portalLocations, portalActivationLocations
     var oldPortals = getSetIntersection(portalLocations, object.locations);
     for (var i = 0; i < object.locations.length; i++) {
       object.locations[i] = offsetLocation(object.locations[i], dr, dc);
+      if (level.map[object.locations[i]] == FOAM)
+      {
+        paintTileAtLocation(object.locations[i], SPACE, changeLog);
+      }
     }
     changeLog.push([object.type, object.id, oldState, serializeObjectState(object)]);
     animations.push([
@@ -2022,7 +2121,7 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
 
   for (var i = 0; i < newLocations.length; i++) {
     var location = newLocations[i];
-    if (!isTileCodeAir(level.map[location])) return false; // blocked by tile
+    if (!isTileCodeAir(object, null, level.map[location], 0, 0)) return false; // blocked by tile
     var otherObject = findObjectAtLocation(location);
     if (otherObject != null && otherObject !== object) return false; // blocked by object
   }
@@ -2040,8 +2139,34 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
   return true;
 }
 
-function isTileCodeAir(tileCode) {
-  return tileCode === SPACE || tileCode === EXIT || tileCode === PORTAL;
+function isTileCodeAir(pusher, pushedObject, tileCode, dr, dc) {
+  switch (tileCode)
+  {
+    case SPACE: case EXIT: case PORTAL: case OPENGATE: return true;
+    case FOAM: return pusher != null;
+    case PLATFORM: return dr != 1;
+    case PLATFORMU: return dr != 1;
+    case PLATFORMD: return dr != -1;
+    case PLATFORML: return dc != 1;
+    case PLATFORMR: return dc != -1;
+    case WOODPLATFORM: return dr != 1 || pusher != null;
+    default: return false;
+  }
+}
+
+function isTileCodePlatform(tileCode) {
+  switch (tileCode)
+  {
+    case PLATFORM: case PLATFORMU: case PLATFORMD: case PLATFORML: case PLATFORMR: case WOODPLATFORM: return true;
+    default: return false;
+  }
+}
+function isTileCodeCoverable(tileCode) {
+  switch (tileCode)
+  {
+    case SPACE: case EXIT: case PORTAL: case PLATFORM: case PLATFORMU: case PLATFORMD: case PLATFORML: case PLATFORMR: case WOODPLATFORM: case OPENGATE: return true;
+    default: return false;
+  }
 }
 
 function addIfNotPresent(array, element) {
@@ -2114,6 +2239,17 @@ function getActivePortalLocations() {
   if (portalLocations.length !== 2) return []; // nice try
   return portalLocations;
 }
+function getOccupiedOpenGateLocations()
+{
+  var result = [];
+  for (var i = 0; i < level.map.length; i++) {
+    if (level.map[i] === OPENGATE) {
+      if (findObjectAtLocation(i))
+          result.push(i);
+    }
+  }
+  return result;
+}
 function getPortalLocations() {
   var result = [];
   for (var i = 0; i < level.map.length; i++) {
@@ -2150,15 +2286,28 @@ var snakeColors = [
   "#0f0",
   "#00f",
   "#ff0",
+  "#f0f",
+  "#0ff",
+  "#80f",
+  "#f80",
+  "#000",
+  "#fff",
 ];
 var snakeColorNames = [
   "Red",
   "Green",
   "Blue",
   "Yellow",
+  "Magenta",
+  "Cyan",
+  "Purple",
+  "Orange",
+  "Black",
+  "White",
 ];
-var blockForeground = ["#de5a6d","#fa65dd","#c367e3","#9c62fa","#625ff0"];
-var blockBackground = ["#853641","#963c84","#753d88","#5d3a96","#3a3990"];
+var blockForeground = ["#de5a6d","#fa65dd","#c367e3","#9c62fa","#625ff0","#79c13a","#ccbf4b","#e08645"];
+var blockBackground = ["#853641","#963c84","#753d88","#5d3a96","#3a3990","#436b21","#756c2b","#8c532b"];
+
 
 var activeSnakeId = null;
 
@@ -2373,6 +2522,7 @@ function render() {
     if (persistentState.showEditor && paintBrushTileCode != null && hoverLocation != null && hoverLocation < level.map.length) {
 
       var savedContext = context;
+      var hoverAlpha = 0.2;
       var buffer = document.createElement("canvas");
       buffer.width = canvas.width;
       buffer.height = canvas.height;
@@ -2383,6 +2533,13 @@ function render() {
       if (typeof paintBrushTileCode === "number") {
         if (level.map[hoverLocation] !== paintBrushTileCode) {
           drawTile(paintBrushTileCode, hoverRowcol.r, hoverRowcol.c, level, hoverLocation);
+          switch (paintBrushTileCode) {
+            // make some tiles bolder
+            case PLATFORM: case PLATFORMU: case PLATFORMD: case PLATFORML: case PLATFORMR: case WOODPLATFORM: case OPENGATE: case CLOSEDGATE:
+              hoverAlpha = 0.4; break;
+            default:
+              hoverAlpha = 0.2; break;
+          }
         }
       } else if (paintBrushTileCode === SNAKE) {
         if (!(objectHere != null && objectHere.type === SNAKE && objectHere.id === paintBrushSnakeColorIndex)) {
@@ -2415,7 +2572,7 @@ function render() {
 
       context = savedContext;
       context.save();
-      context.globalAlpha = 0.2;
+      context.globalAlpha = hoverAlpha;
       context.drawImage(buffer, 0, 0);
       context.restore();
     }
@@ -2441,6 +2598,36 @@ function render() {
         drawCircle(r, c, 0.8, "#888");
         drawCircle(r, c, 0.6, "#111");
         if (activePortalLocations.indexOf(location) !== -1) drawCircle(r, c, 0.3, "#666");
+        break;
+      case PLATFORM:
+        drawPlatform(r, c, -1, 0);
+        break;
+      case PLATFORMU:
+        drawPlatform(r, c, -1, 0);
+        break;
+      case PLATFORMD:
+        drawPlatform(r, c, 1, 0);
+        break;
+      case PLATFORML:
+        drawPlatform(r, c, 0, -1);
+        break;
+      case PLATFORMR:
+        drawPlatform(r, c, 0, 1);
+        break;
+      case WOODPLATFORM:
+        drawOneWayWall("#D38345", r, c, -1, 0);
+        break;
+      case FOAM:
+        drawFoam(r, c);
+        break;
+      case DIGGABLEDIRT:
+        drawDiggableDirt(r, c);
+        break;
+      case OPENGATE:
+        drawGate(r, c, false);
+        break;
+      case CLOSEDGATE:
+        drawGate(r, c, true);
         break;
       default: throw unreachable();
     }
@@ -2554,6 +2741,126 @@ function render() {
     }
   }
 
+  function drawOneWayWall(fillStyle, r, c, dr, dc) {
+    context.fillStyle = fillStyle;
+    if (dr == -1)
+    {
+      context.fillRect(c * tileSize - tileSize/15, r * tileSize - tileSize/15, tileSize + 2*tileSize/15, tileSize/4 + 2*tileSize/15);
+    }
+    else if (dr == 1)
+    {
+      context.fillRect(c * tileSize - tileSize/15, (r + 1) * tileSize - tileSize/15 - tileSize/4, tileSize + 2*tileSize/15, tileSize/4 + 2*tileSize/15);
+    }
+    else if (dc == -1)
+    {
+      context.fillRect(c * tileSize - tileSize/15, r * tileSize - tileSize/15, tileSize/4 + 2*tileSize/15, tileSize + 2*tileSize/15);
+    }
+    else if (dc == 1)
+    {
+      context.fillRect((c + 1) * tileSize - tileSize/15 - tileSize/4, r * tileSize - tileSize/15, tileSize/4 + 2*tileSize/15, tileSize + 2*tileSize/15);
+    }
+
+    context.lineWidth = 3;
+    context.strokeStyle = "#777";
+    context.beginPath();
+
+    if (dr == -1)
+    {
+      context.moveTo(c * tileSize, r * tileSize + tileSize/2);
+      context.lineTo(c * tileSize + tileSize/4, r * tileSize + tileSize/4);
+      context.stroke();
+      context.moveTo(c * tileSize + 3*tileSize/4, r * tileSize + tileSize/4);
+      context.lineTo(c * tileSize + tileSize, r * tileSize + tileSize/2);
+    }
+    else if (dr == 1)
+    {
+      context.moveTo(c * tileSize, r * tileSize + tileSize/2);
+      context.lineTo(c * tileSize + tileSize/4, r * tileSize + 3*tileSize/4);
+      context.stroke();
+      context.moveTo(c * tileSize + 3*tileSize/4, r * tileSize + 3*tileSize/4);
+      context.lineTo(c * tileSize + tileSize, r * tileSize + tileSize/2);
+    }
+    else if (dc == -1)
+    {
+      context.moveTo(c * tileSize + tileSize/2, r * tileSize);
+      context.lineTo(c * tileSize + tileSize/4, r * tileSize + tileSize/4);
+      context.stroke();
+      context.moveTo(c * tileSize + tileSize/4, r * tileSize + 3*tileSize/4);
+      context.lineTo(c * tileSize + tileSize/2, r * tileSize + tileSize);
+    }
+    else if (dc == 1)
+    {
+      context.moveTo(c * tileSize + tileSize/2, r * tileSize);
+      context.lineTo(c * tileSize + 3*tileSize/4, r * tileSize + tileSize/4);
+      context.stroke();
+      context.moveTo(c * tileSize + 3*tileSize/4, r * tileSize + 3*tileSize/4);
+      context.lineTo(c * tileSize + tileSize/2, r * tileSize + tileSize);
+    }
+
+    context.stroke();
+    context.lineWidth = 0;
+  }
+
+  function drawFoam(r, c) {
+    context.fillStyle = "#6BDBC8";
+    for (var i = 0; i < 3; i++) {
+      for (var j = 0; j < 3; j++) {
+        context.beginPath();
+        context.arc(c*tileSize + (i*2+1)*tileSize/6, r*tileSize + (j*2+1)*tileSize/6, tileSize/6, 0, 2*Math.PI);
+        context.fill();
+      }
+    }
+  }
+
+  function drawDiggableDirt(r, c) {
+    drawRect(r, c, "#d37c2a");
+    context.fillStyle = "#844204";
+    context.beginPath();
+    context.moveTo(c*tileSize + tileSize/2, r*tileSize);
+    context.lineTo((c+1)*tileSize, r*tileSize + tileSize/2);
+    context.lineTo(c*tileSize + tileSize/2, (r+1)*tileSize);
+    context.lineTo(c*tileSize, r*tileSize + tileSize/2);
+    context.lineTo(c*tileSize + tileSize/2, r*tileSize);
+    context.fill();
+  }
+
+  function drawGate(r, c, isClosed) {
+    if (isClosed)
+    {
+      context.lineWidth = 3;
+      context.strokeStyle = "#444";
+      context.beginPath();
+      for (var i = 1; i < 3; i++) {
+        context.beginPath();
+        context.moveTo(c*tileSize + i*tileSize/3, r*tileSize);
+        context.lineTo(c*tileSize + i*tileSize/3, (r+1)*tileSize);
+        context.stroke();
+      }
+
+      for (var i = 1; i < 4; i++) {
+        context.beginPath();
+        context.moveTo(c*tileSize, r*tileSize + i*tileSize/4 + tileSize/15);
+        context.lineTo((c+1)*tileSize, r*tileSize + i*tileSize/4 + tileSize/15);
+        context.stroke();
+      }
+
+      context.lineWidth = 0;
+    }
+
+    context.fillStyle = "#777";
+    context.beginPath();
+    context.moveTo(c*tileSize, r*tileSize);
+    context.lineTo((c+1)*tileSize, r*tileSize);
+    context.lineTo((c+1)*tileSize, (r+1)*tileSize);
+    context.lineTo(c*tileSize + 5*tileSize/6, (r+1)*tileSize);
+    context.lineTo(c*tileSize + 5*tileSize/6, r*tileSize + tileSize/2);
+    context.arc(c*tileSize + tileSize/2, r*tileSize + tileSize/2, tileSize/3, 0, Math.PI, true);
+    context.lineTo(c*tileSize + 1*tileSize/6, (r+1)*tileSize);
+    context.lineTo(c*tileSize, (r+1)*tileSize);
+    context.lineTo(c*tileSize, r*tileSize);
+    context.fill();
+  }
+
   function drawWall(r, c, adjacentTiles) {
     drawRect(r, c, "#844204"); // dirt
     context.fillStyle = "#282"; // grass
@@ -2599,6 +2906,39 @@ function render() {
     context.lineTo(x + tileSize * 0.3, y + tileSize * 0.5);
     context.lineTo(x + tileSize * 0.0, y + tileSize * 0.4);
     context.lineTo(x + tileSize * 0.3, y + tileSize * 0.3);
+    context.fill();
+  }
+  function drawPlatform(r, c, dr, dc) {
+    context.fillStyle = "#b9733d";
+    context.beginPath();
+    if (dr == -1)
+    {
+      context.moveTo(c * tileSize, r * tileSize);
+      context.lineTo((c + 1) * tileSize, r * tileSize);
+      context.arc((c + 3/4) * tileSize, (r + 1/4) * tileSize, tileSize/4, 0, Math.PI);
+      context.arc((c + 1/4) * tileSize, (r + 1/4) * tileSize, tileSize/4, 0, Math.PI);
+    }
+    else if (dr == 1)
+    {
+      context.moveTo((c + 1) * tileSize, (r + 1) * tileSize);
+      context.lineTo(c * tileSize, (r + 1) * tileSize);
+      context.arc((c + 1/4) * tileSize, (r + 3/4) * tileSize, tileSize/4, Math.PI, 0);
+      context.arc((c + 3/4) * tileSize, (r + 3/4) * tileSize, tileSize/4, Math.PI, 0);
+    }
+    else if (dc == -1)
+    {
+      context.moveTo(c * tileSize, (r + 1) * tileSize);
+      context.lineTo(c * tileSize, r * tileSize);
+      context.arc((c + 1/4) * tileSize, (r + 1/4) * tileSize, tileSize/4, -Math.PI/2, Math.PI/2);
+      context.arc((c + 1/4) * tileSize, (r + 3/4) * tileSize, tileSize/4, -Math.PI/2, Math.PI/2);
+    }
+    else if (dc == 1)
+    {
+      context.moveTo((c + 1) * tileSize, r * tileSize);
+      context.lineTo((c + 1) * tileSize, (r + 1) * tileSize);
+      context.arc((c + 3/4) * tileSize, (r + 3/4) * tileSize, tileSize/4, Math.PI/2, -Math.PI/2);
+      context.arc((c + 3/4) * tileSize, (r + 1/4) * tileSize, tileSize/4, Math.PI/2, -Math.PI/2);
+    }
     context.fill();
   }
   function drawConnector(context, r1, c1, r2, c2, color) {
@@ -2840,6 +3180,10 @@ function copyArray(array) {
 function getSetIntersection(array1, array2) {
   if (array1.length * array2.length === 0) return [];
   return array1.filter(function(x) { return array2.indexOf(x) !== -1; });
+}
+function getSetSubtract(array1, array2) {
+  if (array1.length === 0) return [];
+  return array1.filter(function(x) { return array2.indexOf(x) == -1; });
 }
 function makeScaleCoordinatesFunction(width1, width2, offset) {
   return function(location) {

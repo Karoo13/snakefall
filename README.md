@@ -15,6 +15,6 @@ List of levels: [Snakefall Wiki](https://github.com/thejoshwolfe/snakefall/wiki/
 
 [Original](http://wolfesoftware.com/snakefall/) - original snakefall from thejoshwolfe, no longer maintained
 
-[Vanilla](https://karoo13.github.io/snakefall/vanilla/) - slightly more up-to-date version of the original repo
+[Vanilla](https://karoo13.github.io/snakefall/vanilla/) - more updated version of the original repo
 
-[Patashu Remix](https://karoo13.github.io/snakefall/patashu-remix/) - adds new elements such as 1-way platforms and diggable dirt
+[Remix](https://karoo13.github.io/snakefall/remix/) - adds new puzzle elements such as 1-way platforms and more
