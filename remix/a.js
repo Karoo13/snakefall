@@ -3282,10 +3282,6 @@ document.getElementById("touchControlsButton").addEventListener("click", functio
 document.getElementById("touchHideButton").addEventListener("click", function() {
   document.getElementById("touchControls").style.visibility = "hidden";
 });
-document.getElementById("touchUnmoveButton").addEventListener("pointerdown", function() {
-  undo(unmoveStuff);
-  render();
-});
 document.getElementById("touchRestartButton").addEventListener("click", function() {
   if (unmoveStuff.undoStack.length === 0 && unmoveStuff.redoStack.length > 0) {
     unreset(unmoveStuff);
@@ -3294,9 +3290,48 @@ document.getElementById("touchRestartButton").addEventListener("click", function
   }
   render();
 });
+// unmove and remove are holdable
+var holdTimeout = 0;
+var holdInterval = 0;
+document.getElementById("touchUnmoveButton").addEventListener("pointerdown", function() {
+  undo(unmoveStuff);
+  render();
+  holdTimeout = setTimeout(function() {
+    undo(unmoveStuff);
+    render();
+    holdInterval = setInterval(function() {
+      undo(unmoveStuff);
+      render();
+    }, 50)
+  }, 500);
+});
+document.getElementById("touchUnmoveButton").addEventListener("pointerup", function() {
+  clearTimeout(holdTimeout);
+  clearInterval(holdInterval);
+});
+document.getElementById("touchUnmoveButton").addEventListener("pointercancel", function() {
+  clearTimeout(holdTimeout);
+  clearInterval(holdInterval);
+});
 document.getElementById("touchRemoveButton").addEventListener("pointerdown", function() {
   redo(unmoveStuff);
   render();
+  holdTimeout = setTimeout(function() {
+    redo(unmoveStuff);
+    render();
+    holdInterval = setInterval(function() {
+      redo(unmoveStuff);
+      render();
+    }, 50)
+  }, 500);
+});
+document.getElementById("touchRemoveButton").addEventListener("pointerup", function() {
+  clearTimeout(holdTimeout);
+  clearInterval(holdInterval);
+});
+document.getElementById("touchRemoveButton").addEventListener("pointercancel", function() {
+  clearTimeout(holdTimeout);
+  clearInterval(holdInterval);
 });
 document.getElementById("touchUpButton").addEventListener("pointerdown", function() {
   move(-1, 0);
@@ -3318,7 +3353,7 @@ document.getElementById("touchDownButton").addEventListener("pointerdown", funct
   move(1, 0);
   render();
 });
-document.getElementById("touchGridButton").addEventListener("pointerdown", function() {
+document.getElementById("touchGridButton").addEventListener("click", function() {
   toggleGrid();
 });
 document.getElementById("touchSaveButton").addEventListener("click", function() {
