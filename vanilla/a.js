@@ -1608,10 +1608,10 @@ function undoStuffChanged(undoStuff) {
   document.getElementById(undoStuff.redoButtonId).disabled = undoStuff.redoStack.length === 0;
   if (undoStuff.undoStack.length === 0 && undoStuff.redoStack.length > 0) {
     document.getElementById("restartButton").textContent = "Fast Forward";
-    document.getElementById("touchRestartButton").textContent = "»";
+    document.getElementById("touchRestartButton").textContent = "skip_next";
   } else {
     document.getElementById("restartButton").textContent = "Restart";
-    document.getElementById("touchRestartButton").textContent = "«";
+    document.getElementById("touchRestartButton").textContent = "skip_previous";
   }
 
   // render paradox display
@@ -2960,8 +2960,9 @@ document.getElementById("touchLeftButton").addEventListener("pointerdown", funct
   move(0, -1);
   render();
 });
-document.getElementById("touchSaveButton").addEventListener("click", function() {
-  saveReplay();
+document.getElementById("touchSwitchButton").addEventListener("pointerdown", function() {
+  switchSnakes(1);
+  render();
 });
 document.getElementById("touchRightButton").addEventListener("pointerdown", function() {
   move(0, 1);
@@ -2971,11 +2972,9 @@ document.getElementById("touchDownButton").addEventListener("pointerdown", funct
   move(1, 0);
   render();
 });
-document.getElementById("touchSwitchLButton").addEventListener("pointerdown", function() {
-  switchSnakes(-1);
-  render();
+document.getElementById("touchGridButton").addEventListener("pointerdown", function() {
+  toggleGrid();
 });
-document.getElementById("touchSwitchRButton").addEventListener("pointerdown", function() {
-  switchSnakes(1);
-  render();
+document.getElementById("touchSaveButton").addEventListener("click", function() {
+  saveReplay();
 });
