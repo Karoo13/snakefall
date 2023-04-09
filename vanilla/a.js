@@ -1755,7 +1755,7 @@ function move(dr, dc) {
     changeLog.push(["i", activeSnake.id, dr, dc, animationQueue, freshlyRemovedAnimatedObjects]);
   }
 
-  var ate = false;
+  var ate = 0;
   var pushedObjects = [];
 
   if (isCollision()) {
@@ -1767,7 +1767,7 @@ function move(dr, dc) {
       if (otherObject.type === FRUIT) {
         // eat
         removeObject(otherObject, changeLog);
-        ate = true;
+        ate = 1;
       } else {
         // push objects
         if (!checkMovement(activeSnake, otherObject, dr, dc, pushedObjects)) return false;
@@ -1777,7 +1777,7 @@ function move(dr, dc) {
 
   // slither forward
   var activeSnakeOldState = serializeObjectState(activeSnake);
-  var size1 = activeSnake.locations.length === 1;
+  var size1 = activeSnake.locations.length + ate === 1;
   var slitherAnimations = [
     70,
     [
@@ -1789,7 +1789,7 @@ function move(dr, dc) {
     ]
   ];
   activeSnake.locations.unshift(newLocation);
-  if (!ate) {
+  if (ate === 0) {
     // drag your tail forward
     var oldRowcol = getRowcol(level, activeSnake.locations[activeSnake.locations.length - 1]);
     var newRowcol = getRowcol(level, activeSnake.locations[activeSnake.locations.length - 2]);

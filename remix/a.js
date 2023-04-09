@@ -21,12 +21,13 @@ var FOAM = "f".charCodeAt(0);
 var DIGGABLEDIRT = "t".charCodeAt(0);
 var OPENGATE = "o".charCodeAt(0);
 var CLOSEDGATE = "c".charCodeAt(0);
-var validTileCodes = [SPACE, WALL, SPIKE, FRUIT, EXIT, PORTAL, PLATFORM, PLATFORMU, PLATFORMD, PLATFORML, PLATFORMR, WOODPLATFORM, FOAM, DIGGABLEDIRT, OPENGATE, CLOSEDGATE];
+var validTileCodes = [SPACE, WALL, SPIKE, FRUIT, POISONFRUIT, EXIT, PORTAL, PLATFORM, PLATFORMU, PLATFORMD, PLATFORML, PLATFORMR, WOODPLATFORM, FOAM, DIGGABLEDIRT, OPENGATE, CLOSEDGATE];
 
 // object types
 var SNAKE = "s";
 var BLOCK = "b";
 var FRUIT = "f";
+var POISONFRUIT = "p";
 
 var tileSize = 30;
 var level;
@@ -145,6 +146,7 @@ function parseLevel(string) {
     if      (object.type === SNAKE) locationsLimit = -1;
     else if (object.type === BLOCK) locationsLimit = -1;
     else if (object.type === FRUIT) locationsLimit = 1;
+    else if (object.type === POISONFRUIT) locationsLimit = 1;
     else throw parserError("expected object type code");
     cursor += 1;
 
@@ -501,7 +503,8 @@ document.addEventListener("keydown", function(event) {
       if ( persistentState.showEditor && modifierMask === CTRL) { cutSelection(); break; }
       return;
     case "KeyF":
-      if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(FRUIT); break; }
+      if ( persistentState.showEditor && modifierMask === 0)     { setPaintBrushTileCode(FRUIT); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode(POISONFRUIT); break; }
       return;
     case "KeyP":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(PORTAL); break; }
@@ -663,6 +666,7 @@ var paintButtonIdAndTileCodes = [
   ["paintSpikeButton", SPIKE],
   ["paintExitButton", EXIT],
   ["paintFruitButton", FRUIT],
+  ["paintPoisonFruitButton", POISONFRUIT],
   ["paintPortalButton", PORTAL],
   //["paintPlatformButton", PLATFORM],
   ["paintPlatformUButton", PLATFORMU],
@@ -1186,6 +1190,19 @@ function newFruit(location) {
     locations: [location],
   };
 }
+function newPoisonFruit(location) {
+  var fruits = getObjectsOfType(POISONFRUIT);
+  fruits.sort(compareId);
+  for (var i = 0; i < fruits.length; i++) {
+    if (fruits[i].id !== i) break;
+  }
+  return {
+    type: POISONFRUIT,
+    id: i,
+    dead: false, // unused
+    locations: [location],
+  };
+}
 function paintAtLocation(location, changeLog) {
   if (isDead()){
     // can't edit while dead
@@ -1238,6 +1255,8 @@ function paintAtLocation(location, changeLog) {
         object.id = newBlock().id;
       } else if (object.type === FRUIT) {
         object.id = newFruit().id;
+      } else if (object.type === POISONFRUIT) {
+        object.id = newPoisonFruit().id;
       } else throw unreachable();
       level.objects.push(object);
       changeLog.push([object.type, object.id, [0,[]], serializeObjectState(object)]);
@@ -1323,6 +1342,15 @@ function paintAtLocation(location, changeLog) {
     var object = newFruit(location)
     level.objects.push(object);
     changeLog.push([object.type, object.id, serializeObjectState(null), serializeObjectState(object)]);
+  } else if (paintBrushTileCode === POISONFRUIT) {
+    // fruit covers other coverable tiles too much, only cover platforms
+    if (!isTileCodePlatform(level.map[location])) {
+      paintTileAtLocation(location, SPACE, changeLog);
+    }
+    removeAnyObjectAtLocation(location, changeLog);
+    var object = newPoisonFruit(location)
+    level.objects.push(object);
+    changeLog.push([object.type, object.id, serializeObjectState(null), serializeObjectState(object)]);
   } else throw unreachable();
   render();
 }
@@ -1346,6 +1374,7 @@ function pushUndo(undoStuff, changeLog) {
   //   ["s", 1, [false, [11,12]], [true, [12,13]]],  // snake id 1 moved from alive at [11, 12] to dead at [12, 13]
   //   ["b", 1, [false, [20,30]], [false, []]],      // block id 1 was deleted from location [20, 30]
   //   ["f", 0, [false, [40]], [false, []]],         // fruit id 0 was deleted from location [40]
+  //   ["p", 0, [false, [40]], [false, []]],         // poisonfruit id 0 was deleted from location [40]
   //   ["t", 25, 10],                                // height changed from 25 to 10 from the top, shifting all tiles and objects.
   //   ["l", 8, 10],                                 // width changed from 8 to 10 from the left, shifting all tiles and objects.
   //   ["h", 25, 10],                                // height changed from 25 to 10. all cropped tiles are guaranteed to be SPACE.
@@ -1458,7 +1487,7 @@ function reduceChangeLog(changeLog) {
         changeLog.splice(i, 1);
         i--;
       }
-    } else if (change[0] === SNAKE || change[0] === BLOCK || change[0] === FRUIT) {
+    } else if (change[0] === SNAKE || change[0] === BLOCK || change[0] === FRUIT || change[0] === POISONFRUIT) {
       for (var j = i + 1; j < changeLog.length; j++) {
         var otherChange = changeLog[j];
         if (otherChange[0] === change[0] && otherChange[1] === change[1]) {
@@ -1594,7 +1623,7 @@ function undoChanges(changes, changeLog) {
       if (location >= level.map.length) return "Can't turn " + describe(toTileCode) + " into " + describe(fromTileCode) + " out of bounds";
       if (level.map[location] !== toTileCode) return "Can't turn " + describe(toTileCode) + " into " + describe(fromTileCode) + " because there's " + describe(level.map[location]) + " there now";
       paintTileAtLocation(location, fromTileCode, changeLog);
-    } else if (change[0] === SNAKE || change[0] === BLOCK || change[0] === FRUIT) {
+    } else if (change[0] === SNAKE || change[0] === BLOCK || change[0] === FRUIT || change[0] === POISONFRUIT) {
       // change object
       var type = change[0];
       var id = change[1];
@@ -1660,6 +1689,9 @@ function describe(arg1, arg2) {
   }
   if (arg1 === FRUIT) {
     return "Fruit";
+  }
+  if (arg1 === POISONFRUIT) {
+    return "Poison Fruit";
   }
   if (typeof arg1 === "object") return describe(arg1.type, arg1.id);
   throw unreachable();
@@ -1810,7 +1842,7 @@ function move(dr, dc) {
     changeLog.push(["i", activeSnake.id, dr, dc, animationQueue, freshlyRemovedAnimatedObjects]);
   }
 
-  var ate = false;
+  var ate = 0;
   var pushedObjects = [];
 
   //track OpenGates that had objects on them
@@ -1830,7 +1862,12 @@ function move(dr, dc) {
       if (otherObject.type === FRUIT) {
         // eat
         removeObject(otherObject, changeLog);
-        ate = true;
+        ate = 1;
+      } else if (otherObject.type === POISONFRUIT) {
+        // eat if long enough
+        if (activeSnake.locations.length <= 1) return;
+        removeObject(otherObject, changeLog);
+        ate = -1;
       } else {
         // push objects
         if (!checkMovement(activeSnake, otherObject, dr, dc, pushedObjects)) return false;
@@ -1840,7 +1877,7 @@ function move(dr, dc) {
 
   // slither forward
   var activeSnakeOldState = serializeObjectState(activeSnake);
-  var size1 = activeSnake.locations.length === 1;
+  var size1 = activeSnake.locations.length + ate === 1;
   var slitherAnimations = [
     70,
     [
@@ -1852,11 +1889,11 @@ function move(dr, dc) {
     ]
   ];
   activeSnake.locations.unshift(newLocation);
-  if (!ate) {
+  while (ate < 1) {
     // drag your tail forward
     var oldRowcol = getRowcol(level, activeSnake.locations[activeSnake.locations.length - 1]);
     var newRowcol = getRowcol(level, activeSnake.locations[activeSnake.locations.length - 2]);
-    if (!size1) {
+    if (!size1 && ate === 0) {
       slitherAnimations.push([
         SLITHER_TAIL,
         activeSnake.id,
@@ -1865,6 +1902,7 @@ function move(dr, dc) {
       ]);
     }
     activeSnake.locations.pop();
+    ate += 1;
   }
   changeLog.push([activeSnake.type, activeSnake.id, activeSnakeOldState, serializeObjectState(activeSnake)]);
 
@@ -1930,7 +1968,7 @@ function move(dr, dc) {
     // fall
     var dyingObjects = [];
     var fallingObjects = level.objects.filter(function(object) {
-      if (object.type === FRUIT) return; // can't fall
+      if (object.type === FRUIT || object.type === POISONFRUIT) return; // can't fall
       var theseDyingObjects = [];
       if (!checkMovement(null, object, 1, 0, [], theseDyingObjects)) return false;
       // this object can fall. maybe more will fall with it too. we'll check those separately.
@@ -2033,7 +2071,7 @@ function checkMovement(pusher, pushedObject, dr, dc, pushedObjects, dyingObjects
       }
       var yetAnotherObject = findObjectAtLocation(forwardLocation);
       if (yetAnotherObject != null) {
-        if (yetAnotherObject.type === FRUIT) {
+        if (yetAnotherObject.type === FRUIT || yetAnotherObject.type === POISONFRUIT) {
           // not pushable
           return false;
         }
@@ -2243,7 +2281,7 @@ function findObjectAtLocation(location) {
   return null;
 }
 function isUneatenFruit() {
-  return getObjectsOfType(FRUIT).length > 0;
+  return getObjectsOfType(FRUIT).length + getObjectsOfType(POISONFRUIT).length > 0;
 }
 function getActivePortalLocations() {
   var portalLocations = getPortalLocations();
@@ -2564,6 +2602,10 @@ function render() {
         if (!(objectHere != null && objectHere.type === FRUIT)) {
           drawObject(newFruit(hoverLocation));
         }
+      } else if (paintBrushTileCode === POISONFRUIT) {
+        if (!(objectHere != null && objectHere.type === POISONFRUIT)) {
+          drawObject(newPoisonFruit(hoverLocation));
+        }
       } else if (paintBrushTileCode === "resizeU") {
         void 0; // do nothing
       } else if (paintBrushTileCode === "resizeD") {
@@ -2747,6 +2789,10 @@ function render() {
       case FRUIT:
         var rowcol = getRowcol(level, object.locations[0]);
         drawCircle(rowcol.r, rowcol.c, 1, "#f0f");
+        break;
+      case POISONFRUIT:
+        var rowcol = getRowcol(level, object.locations[0]);
+        drawCircle(rowcol.r, rowcol.c, 1, "#570");
         break;
       default: throw unreachable();
     }
