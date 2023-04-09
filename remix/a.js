@@ -1143,7 +1143,6 @@ function setLeft(newWidth, changeLog) {
   level.objects.forEach(function(object) {
     object.locations = object.locations.map(transformLocation);
   });
-  if (resizeDragAnchorRowcol) resizeDragAnchorRowcol.c += offset;
   changeLog.push(["l", level.width, newWidth]);
   level.width = newWidth;
 }
@@ -1190,27 +1189,37 @@ function newFruit(location) {
 function paintAtLocation(location, changeLog) {
   if (isDead()){
     // can't edit while dead
-  } else  if (typeof paintBrushTileCode === "number") {
+  } else if (typeof paintBrushTileCode === "number") {
     removeAnyObjectAtLocation(location, changeLog);
     paintTileAtLocation(location, paintBrushTileCode, changeLog);
   } else if (paintBrushTileCode === "resizeU") {
     var toRowcol = getRowcol(level, location);
+    if (resizeDragAnchorRowcol == null) {
+      resizeDragAnchorRowcol = toRowcol;
+      return;
+    }
     var dr = toRowcol.r - resizeDragAnchorRowcol.r;
     var dc = toRowcol.c - resizeDragAnchorRowcol.c;
-    resizeDragAnchorRowcol = toRowcol;
+    if (dr === 0 && dc === 0) return;
     if (dr < 0) setTop(level.height - dr, changeLog);
     if (dc < 0) setLeft(level.width - dc, changeLog);
     if (dr > 0) setHeight(level.height + dr, changeLog);
     if (dc > 0) setWidth(level.width + dc, changeLog);
+    resizeDragAnchorRowcol = null;
   } else if (paintBrushTileCode === "resizeD") {
     var toRowcol = getRowcol(level, location);
+    if (resizeDragAnchorRowcol == null) {
+      resizeDragAnchorRowcol = toRowcol;
+      return;
+    }
     var dr = toRowcol.r - resizeDragAnchorRowcol.r;
     var dc = toRowcol.c - resizeDragAnchorRowcol.c;
-    resizeDragAnchorRowcol = toRowcol;
+    if (dr === 0 && dc === 0) return;
     if (dr > 0) setTop(Math.max(level.height - dr, 2), changeLog);
     if (dc > 0) setLeft(Math.max(level.width - dc, 2), changeLog);
     if (dr < 0) setHeight(Math.max(level.height + dr, 2), changeLog);
     if (dc < 0) setWidth(Math.max(level.width + dc, 2), changeLog);
+    resizeDragAnchorRowcol = null;
   } else if (paintBrushTileCode === "select") {
     selectionEnd = location;
   } else if (paintBrushTileCode === "paste") {
