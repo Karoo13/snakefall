@@ -2141,7 +2141,7 @@ function getBlocks() {
 }
 function getObjectsOfType(type) {
   return level.objects.filter(function(object) {
-    return object.type == type;
+    return object.type === type;
   });
 }
 function isDead() {
@@ -2437,7 +2437,7 @@ function render() {
         drawWall(r, c, getAdjacentTiles());
         break;
       case SPIKE:
-        drawSpikes(r, c, level);
+        drawSpikes(r, c);
         break;
       case EXIT:
         var radiusFactor = isUneatenFruit() ? 0.7 : 1.2;
@@ -2586,7 +2586,7 @@ function render() {
     if (!isOccupied(-1,  0)) context.fillRect((c)            * tileSize, (r)            * tileSize, outlinePixels, tileSize);
     if (!isOccupied( 1,  0)) context.fillRect((c+complement) * tileSize, (r)            * tileSize, outlinePixels, tileSize);
   }
-  function drawSpikes(r, c) {
+  function drawSpikes(r, c, adjacentTiles) {
     var x = c * tileSize;
     var y = r * tileSize;
     context.fillStyle = "#333";

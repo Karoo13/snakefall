@@ -2128,7 +2128,7 @@ function moveObjects(objects, dr, dc, portalLocations, portalActivationLocations
     var oldPortals = getSetIntersection(portalLocations, object.locations);
     for (var i = 0; i < object.locations.length; i++) {
       object.locations[i] = offsetLocation(object.locations[i], dr, dc);
-      if (level.map[object.locations[i]] == FOAM)
+      if (level.map[object.locations[i]] === FOAM)
       {
         paintTileAtLocation(object.locations[i], SPACE, changeLog);
       }
@@ -2317,7 +2317,7 @@ function getBlocks() {
 }
 function getObjectsOfType(type) {
   return level.objects.filter(function(object) {
-    return object.type == type;
+    return object.type === type;
   });
 }
 function isDead() {
@@ -2638,7 +2638,7 @@ function render() {
         drawWall(r, c, getAdjacentTiles());
         break;
       case SPIKE:
-        drawSpikes(r, c, level);
+        drawSpikes(r, c, getAdjacentTiles());
         break;
       case EXIT:
         var radiusFactor = isUneatenFruit() ? 0.7 : 1.2;
@@ -2668,7 +2668,7 @@ function render() {
         drawPlatform(r, c, 0, 1);
         break;
       case WOODPLATFORM:
-        drawOneWayWall("#D38345", r, c, -1, 0);
+        drawOneWayWall("#D38345", r, c, -1, 0, getAdjacentTiles());
         break;
       case FOAM:
         drawFoam(r, c);
@@ -2798,58 +2798,63 @@ function render() {
     }
   }
 
-  function drawOneWayWall(fillStyle, r, c, dr, dc) {
+  function drawOneWayWall(fillStyle, r, c, dr, dc, adjacentTiles) {
+    var extendTop    = adjacentTiles[0][1] === SPACE || adjacentTiles[0][1] === WOODPLATFORM || adjacentTiles[0][1] === PLATFORMU ? tileSize/15 : 0;
+    var extendLeft   = adjacentTiles[1][0] === SPACE ? tileSize/15 : 0;
+    var extendBottom = adjacentTiles[2][1] === SPACE ? tileSize/15 : 0;
+    var extendRight  = adjacentTiles[1][2] === SPACE ? tileSize/15 : 0;
     context.fillStyle = fillStyle;
-    if (dr == -1)
+
+    if (dr === -1)
     {
-      context.fillRect(c * tileSize - tileSize/15, r * tileSize - tileSize/15, tileSize + 2*tileSize/15, tileSize/4 + 2*tileSize/15);
+      context.fillRect(c * tileSize - extendLeft, r * tileSize, tileSize + extendLeft + extendRight, 4*tileSize/15);
     }
-    else if (dr == 1)
+    else if (dr === 1)
     {
-      context.fillRect(c * tileSize - tileSize/15, (r + 1) * tileSize - tileSize/15 - tileSize/4, tileSize + 2*tileSize/15, tileSize/4 + 2*tileSize/15);
+      context.fillRect(c * tileSize - extendLeft, (r + 1) * tileSize - 4*tileSize/15, tileSize + extendLeft + extendRight, 4*tileSize/15);
     }
-    else if (dc == -1)
+    else if (dc === -1)
     {
-      context.fillRect(c * tileSize - tileSize/15, r * tileSize - tileSize/15, tileSize/4 + 2*tileSize/15, tileSize + 2*tileSize/15);
+      context.fillRect(c * tileSize, r * tileSize - extendTop, 4*tileSize/15, tileSize + extendTop + extendBottom);
     }
-    else if (dc == 1)
+    else if (dc === 1)
     {
-      context.fillRect((c + 1) * tileSize - tileSize/15 - tileSize/4, r * tileSize - tileSize/15, tileSize/4 + 2*tileSize/15, tileSize + 2*tileSize/15);
+      context.fillRect((c + 1) * tileSize - 4*tileSize/15, r * tileSize - extendTop, 4*tileSize/15, tileSize + extendTop + extendBottom);
     }
 
     context.lineWidth = 3;
     context.strokeStyle = "#777";
     context.beginPath();
 
-    if (dr == -1)
+    if (dr === -1)
     {
-      context.moveTo(c * tileSize, r * tileSize + tileSize/2);
-      context.lineTo(c * tileSize + tileSize/4, r * tileSize + tileSize/4);
-      context.stroke();
-      context.moveTo(c * tileSize + 3*tileSize/4, r * tileSize + tileSize/4);
-      context.lineTo(c * tileSize + tileSize, r * tileSize + tileSize/2);
+      if (adjacentTiles[1][0] !== WOODPLATFORM) {
+        context.moveTo(c * tileSize, r * tileSize + tileSize/2);
+        context.lineTo(c * tileSize + tileSize/4, r * tileSize + tileSize/4);
+      }
+      if (adjacentTiles[1][2] !== WOODPLATFORM) {
+        context.moveTo(c * tileSize + 3*tileSize/4, r * tileSize + tileSize/4);
+        context.lineTo(c * tileSize + tileSize, r * tileSize + tileSize/2);
+      }
     }
-    else if (dr == 1)
+    else if (dr === 1)
     {
       context.moveTo(c * tileSize, r * tileSize + tileSize/2);
       context.lineTo(c * tileSize + tileSize/4, r * tileSize + 3*tileSize/4);
-      context.stroke();
       context.moveTo(c * tileSize + 3*tileSize/4, r * tileSize + 3*tileSize/4);
       context.lineTo(c * tileSize + tileSize, r * tileSize + tileSize/2);
     }
-    else if (dc == -1)
+    else if (dc === -1)
     {
       context.moveTo(c * tileSize + tileSize/2, r * tileSize);
       context.lineTo(c * tileSize + tileSize/4, r * tileSize + tileSize/4);
-      context.stroke();
       context.moveTo(c * tileSize + tileSize/4, r * tileSize + 3*tileSize/4);
       context.lineTo(c * tileSize + tileSize/2, r * tileSize + tileSize);
     }
-    else if (dc == 1)
+    else if (dc === 1)
     {
       context.moveTo(c * tileSize + tileSize/2, r * tileSize);
       context.lineTo(c * tileSize + 3*tileSize/4, r * tileSize + tileSize/4);
-      context.stroke();
       context.moveTo(c * tileSize + 3*tileSize/4, r * tileSize + 3*tileSize/4);
       context.lineTo(c * tileSize + tileSize/2, r * tileSize + tileSize);
     }
@@ -2941,55 +2946,114 @@ function render() {
     if (!isOccupied(-1,  0)) context.fillRect((c)            * tileSize, (r)            * tileSize, outlinePixels, tileSize);
     if (!isOccupied( 1,  0)) context.fillRect((c+complement) * tileSize, (r)            * tileSize, outlinePixels, tileSize);
   }
-  function drawSpikes(r, c) {
+  function drawSpikes(r, c, adjacentTiles) {
+    var connectUp, connectDown, connectLeft, connectRight = false;
+    if (adjacentTiles[0][1] === WALL) connectUp = true;
+    if (adjacentTiles[2][1] === WALL) connectDown = true;
+    if (adjacentTiles[1][0] === WALL) connectLeft = true;
+    if (adjacentTiles[1][2] === WALL) connectRight = true;
+    if (connectUp && connectDown && connectLeft) connectUp = connectDown = false;
+    if (connectUp && connectDown && connectRight) connectUp = connectDown = false;
+    if (!connectLeft && !connectRight && adjacentTiles[0][1] == null) connectUp = true;
+    if (!connectLeft && !connectRight && adjacentTiles[2][1] == null) connectDown = true;
+    if (!connectUp && !connectDown && adjacentTiles[1][0] == null) connectLeft = true;
+    if (!connectUp && !connectDown && adjacentTiles[1][2] == null) connectRight = true;
+    if (connectUp && connectLeft && adjacentTiles[0][0] === WALL) {
+      if (adjacentTiles[1][2] === SPIKE) connectUp = false;
+      else connectLeft = false;
+    }
+    if (connectUp && connectRight && adjacentTiles[0][2] === WALL) {
+      if (adjacentTiles[1][0] === SPIKE) connectUp = false;
+      else connectRight = false;
+    }
+    if (connectDown && connectLeft && adjacentTiles[2][0] === WALL) {
+      if (adjacentTiles[1][2] === SPIKE) connectDown = false;
+      else connectLeft = false;
+    }
+    if (connectDown && connectRight && adjacentTiles[2][2] === WALL) {
+      if (adjacentTiles[1][0] === SPIKE) connectDown = false;
+      else connectRight = false;
+    }
+    if (adjacentTiles[0][1] === SPIKE && adjacentTiles[2][1] === SPIKE) {
+      if (connectLeft && (adjacentTiles[0][0] === WALL || adjacentTiles[0][0] === SPIKE || adjacentTiles[0][0] == null) && (adjacentTiles[2][0] === WALL || adjacentTiles[2][0] === SPIKE || adjacentTiles[2][0] == null)) connectLeft = false;
+      if (connectRight && (adjacentTiles[0][2] === WALL || adjacentTiles[0][2] === SPIKE || adjacentTiles[0][2] == null) && (adjacentTiles[2][2] === WALL || adjacentTiles[2][2] === SPIKE || adjacentTiles[2][2] == null)) connectRight = false;
+    }
+    if (adjacentTiles[1][0] === SPIKE && adjacentTiles[1][2] === SPIKE) {
+      if (connectUp && (adjacentTiles[0][0] === WALL || adjacentTiles[0][0] === SPIKE || adjacentTiles[0][0] == null) && (adjacentTiles[0][2] === WALL || adjacentTiles[0][2] === SPIKE || adjacentTiles[0][2] == null)) connectUp = false;
+      if (connectDown && (adjacentTiles[2][0] === WALL || adjacentTiles[2][0] === SPIKE || adjacentTiles[2][0] == null) && (adjacentTiles[2][2] === WALL || adjacentTiles[2][2] === SPIKE || adjacentTiles[2][2] == null)) connectDown = false;
+    }
+    if (adjacentTiles[0][1] === SPIKE) connectUp = true;
+    if (adjacentTiles[2][1] === SPIKE) connectDown = true;
+    if (adjacentTiles[1][0] === SPIKE) connectLeft = true;
+    if (adjacentTiles[1][2] === SPIKE) connectRight = true;
     var x = c * tileSize;
     var y = r * tileSize;
     context.fillStyle = "#333";
     context.beginPath();
     context.moveTo(x + tileSize * 0.3, y + tileSize * 0.3);
-    context.lineTo(x + tileSize * 0.4, y + tileSize * 0.0);
-    context.lineTo(x + tileSize * 0.5, y + tileSize * 0.3);
-    context.lineTo(x + tileSize * 0.6, y + tileSize * 0.0);
+    if (connectUp) {
+      context.lineTo(x + tileSize * 0.3, y + tileSize * 0.0);
+      context.lineTo(x + tileSize * 0.7, y + tileSize * 0.0);
+    } else {
+      context.lineTo(x + tileSize * 0.4, y + tileSize * 0.0);
+      context.lineTo(x + tileSize * 0.5, y + tileSize * 0.3);
+      context.lineTo(x + tileSize * 0.6, y + tileSize * 0.0);
+    }
     context.lineTo(x + tileSize * 0.7, y + tileSize * 0.3);
-    context.lineTo(x + tileSize * 1.0, y + tileSize * 0.4);
-    context.lineTo(x + tileSize * 0.7, y + tileSize * 0.5);
-    context.lineTo(x + tileSize * 1.0, y + tileSize * 0.6);
+    if (connectRight) {
+      context.lineTo(x + tileSize * 1.0, y + tileSize * 0.3);
+      context.lineTo(x + tileSize * 1.0, y + tileSize * 0.7);
+    } else {
+      context.lineTo(x + tileSize * 1.0, y + tileSize * 0.4);
+      context.lineTo(x + tileSize * 0.7, y + tileSize * 0.5);
+      context.lineTo(x + tileSize * 1.0, y + tileSize * 0.6);
+    }
     context.lineTo(x + tileSize * 0.7, y + tileSize * 0.7);
-    context.lineTo(x + tileSize * 0.6, y + tileSize * 1.0);
-    context.lineTo(x + tileSize * 0.5, y + tileSize * 0.7);
-    context.lineTo(x + tileSize * 0.4, y + tileSize * 1.0);
+    if (connectDown) {
+      context.lineTo(x + tileSize * 0.7, y + tileSize * 1.0);
+      context.lineTo(x + tileSize * 0.3, y + tileSize * 1.0);
+    } else {
+      context.lineTo(x + tileSize * 0.6, y + tileSize * 1.0);
+      context.lineTo(x + tileSize * 0.5, y + tileSize * 0.7);
+      context.lineTo(x + tileSize * 0.4, y + tileSize * 1.0);
+    }
     context.lineTo(x + tileSize * 0.3, y + tileSize * 0.7);
-    context.lineTo(x + tileSize * 0.0, y + tileSize * 0.6);
-    context.lineTo(x + tileSize * 0.3, y + tileSize * 0.5);
-    context.lineTo(x + tileSize * 0.0, y + tileSize * 0.4);
+    if (connectLeft) {
+      context.lineTo(x + tileSize * 0.0, y + tileSize * 0.7);
+      context.lineTo(x + tileSize * 0.0, y + tileSize * 0.3);
+    } else {
+      context.lineTo(x + tileSize * 0.0, y + tileSize * 0.6);
+      context.lineTo(x + tileSize * 0.3, y + tileSize * 0.5);
+      context.lineTo(x + tileSize * 0.0, y + tileSize * 0.4);
+    }
     context.lineTo(x + tileSize * 0.3, y + tileSize * 0.3);
     context.fill();
   }
   function drawPlatform(r, c, dr, dc) {
     context.fillStyle = "#b9733d";
     context.beginPath();
-    if (dr == -1)
+    if (dr === -1)
     {
       context.moveTo(c * tileSize, r * tileSize);
       context.lineTo((c + 1) * tileSize, r * tileSize);
       context.arc((c + 3/4) * tileSize, (r + 1/4) * tileSize, tileSize/4, 0, Math.PI);
       context.arc((c + 1/4) * tileSize, (r + 1/4) * tileSize, tileSize/4, 0, Math.PI);
     }
-    else if (dr == 1)
+    else if (dr === 1)
     {
       context.moveTo((c + 1) * tileSize, (r + 1) * tileSize);
       context.lineTo(c * tileSize, (r + 1) * tileSize);
       context.arc((c + 1/4) * tileSize, (r + 3/4) * tileSize, tileSize/4, Math.PI, 0);
       context.arc((c + 3/4) * tileSize, (r + 3/4) * tileSize, tileSize/4, Math.PI, 0);
     }
-    else if (dc == -1)
+    else if (dc === -1)
     {
       context.moveTo(c * tileSize, (r + 1) * tileSize);
       context.lineTo(c * tileSize, r * tileSize);
       context.arc((c + 1/4) * tileSize, (r + 1/4) * tileSize, tileSize/4, -Math.PI/2, Math.PI/2);
       context.arc((c + 1/4) * tileSize, (r + 3/4) * tileSize, tileSize/4, -Math.PI/2, Math.PI/2);
     }
-    else if (dc == 1)
+    else if (dc === 1)
     {
       context.moveTo((c + 1) * tileSize, r * tileSize);
       context.lineTo((c + 1) * tileSize, (r + 1) * tileSize);
@@ -3240,7 +3304,7 @@ function getSetIntersection(array1, array2) {
 }
 function getSetSubtract(array1, array2) {
   if (array1.length === 0) return [];
-  return array1.filter(function(x) { return array2.indexOf(x) == -1; });
+  return array1.filter(function(x) { return array2.indexOf(x) === -1; });
 }
 function makeScaleCoordinatesFunction(width1, width2, offset) {
   return function(location) {
