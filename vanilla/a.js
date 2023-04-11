@@ -1,6 +1,6 @@
 function unreachable() { return new Error("unreachable"); }
 if (typeof VERSION === "undefined") {
-  document.getElementById("versionSpan").innerHTML = "v.1.3";
+  document.getElementById("versionSpan").innerHTML = "v.1.4";
 }
 var canvas = document.getElementById("canvas");
 
@@ -2437,7 +2437,7 @@ function render() {
         drawWall(r, c, getAdjacentTiles());
         break;
       case SPIKE:
-        drawSpikes(r, c);
+        drawSpikes(r, c, getAdjacentTiles());
         break;
       case EXIT:
         var radiusFactor = isUneatenFruit() ? 0.7 : 1.2;
@@ -2587,26 +2587,99 @@ function render() {
     if (!isOccupied( 1,  0)) context.fillRect((c+complement) * tileSize, (r)            * tileSize, outlinePixels, tileSize);
   }
   function drawSpikes(r, c, adjacentTiles) {
+    var connectU, connectD, connectL, connectR = false;
+    var spikeU = adjacentTiles[0][1] === SPIKE;
+    var spikeD = adjacentTiles[2][1] === SPIKE;
+    var spikeL = adjacentTiles[1][0] === SPIKE;
+    var spikeR = adjacentTiles[1][2] === SPIKE;
+    var connectUL = adjacentTiles[0][1] === WALL && adjacentTiles[0][0] === WALL;
+    var connectUR = adjacentTiles[0][1] === WALL && adjacentTiles[0][2] === WALL;
+    var connectDL = adjacentTiles[2][1] === WALL && adjacentTiles[2][0] === WALL;
+    var connectDR = adjacentTiles[2][1] === WALL && adjacentTiles[2][2] === WALL;
+    var connectLU = adjacentTiles[1][0] === WALL && adjacentTiles[0][0] === WALL;
+    var connectLD = adjacentTiles[1][0] === WALL && adjacentTiles[2][0] === WALL;
+    var connectRU = adjacentTiles[1][2] === WALL && adjacentTiles[0][2] === WALL;
+    var connectRD = adjacentTiles[1][2] === WALL && adjacentTiles[2][2] === WALL;
+    connectU = adjacentTiles[0][1] === WALL && !connectUL && !connectUR;
+    connectD = adjacentTiles[2][1] === WALL && !connectDL && !connectDR;
+    connectL = adjacentTiles[1][0] === WALL && !connectLU && !connectLD;
+    connectR = adjacentTiles[1][2] === WALL && !connectRU && !connectRD;
+    if ((spikeU|0) + (spikeD|0) + (spikeL|0) + (spikeR|0) <= 1) { // connected to 1 or 0 other spikes
+      connectU = adjacentTiles[0][1] === WALL && !(connectLU && connectRU);
+      connectD = adjacentTiles[2][1] === WALL && !(connectLD && connectRD);
+      connectL = adjacentTiles[1][0] === WALL && !(connectUL && connectDL);
+      connectR = adjacentTiles[1][2] === WALL && !(connectUR && connectDR);
+      if (connectL && connectR && adjacentTiles[0][1] === WALL && (spikeD || connectLU && connectRU)) { connectL = connectR = false; connectU = true; }
+      if (connectL && connectR && adjacentTiles[2][1] === WALL && (spikeU || connectLD && connectRD)) { connectL = connectR = false; connectD = true; }
+      if (connectU && connectD && adjacentTiles[1][0] === WALL && (spikeR || connectUL && connectDL)) { connectU = connectD = false; connectL = true; }
+      if (connectU && connectD && adjacentTiles[1][2] === WALL && (spikeL || connectUR && connectDR)) { connectU = connectD = false; connectR = true; }
+      connectU = connectU ^ (connectU && connectL && connectUL && (connectR || spikeR));
+      connectU = connectU ^ (connectU && connectR && connectUR && (connectL || spikeL));
+      connectD = connectD ^ (connectD && connectL && connectDL && (connectR || spikeR));
+      connectD = connectD ^ (connectD && connectR && connectDR && (connectL || spikeL));
+      connectL = connectL ^ (connectL && connectU && connectLU && (connectD || spikeD));
+      connectL = connectL ^ (connectL && connectD && connectLD && (connectU || spikeU));
+      connectR = connectR ^ (connectR && connectU && connectRU && (connectD || spikeD));
+      connectR = connectR ^ (connectR && connectD && connectRD && (connectU || spikeU));
+      connectL = connectL ^ (connectL && connectU && connectUL);
+      connectL = connectL ^ (connectL && connectD && connectDL);
+      connectR = connectR ^ (connectR && connectU && connectUR);
+      connectR = connectR ^ (connectR && connectD && connectDR);
+    } else {
+      connectU = connectU || connectUL && !connectUR && spikeD && adjacentTiles[0][2] !== SPIKE;
+      connectU = connectU || connectUR && !connectUL && spikeD && adjacentTiles[0][0] !== SPIKE;
+      connectD = connectD || connectDL && !connectDR && spikeU && adjacentTiles[2][2] !== SPIKE;
+      connectD = connectD || connectDR && !connectDL && spikeU && adjacentTiles[2][0] !== SPIKE;
+      connectL = connectL || connectLU && !connectLD && spikeR && adjacentTiles[2][0] !== SPIKE;
+      connectL = connectL || connectLD && !connectLU && spikeR && adjacentTiles[0][0] !== SPIKE;
+      connectR = connectR || connectRU && !connectRD && spikeL && adjacentTiles[2][2] !== SPIKE;
+      connectR = connectR || connectRD && !connectRU && spikeL && adjacentTiles[0][2] !== SPIKE;
+    }
+    connectL = connectL ^ (connectL && connectU && connectUL);
+    connectL = connectL ^ (connectL && connectD && connectDL);
+    connectR = connectR ^ (connectR && connectU && connectUR);
+    connectR = connectR ^ (connectR && connectD && connectDR);
+
     var x = c * tileSize;
     var y = r * tileSize;
     context.fillStyle = "#333";
     context.beginPath();
     context.moveTo(x + tileSize * 0.3, y + tileSize * 0.3);
+    if (spikeU || connectU) {
+      context.lineTo(x + tileSize * 0.3, y + tileSize * 0.0);
+      context.lineTo(x + tileSize * 0.7, y + tileSize * 0.0);
+    } else {
     context.lineTo(x + tileSize * 0.4, y + tileSize * 0.0);
     context.lineTo(x + tileSize * 0.5, y + tileSize * 0.3);
     context.lineTo(x + tileSize * 0.6, y + tileSize * 0.0);
+  }
     context.lineTo(x + tileSize * 0.7, y + tileSize * 0.3);
+    if (spikeR || connectR) {
+      context.lineTo(x + tileSize * 1.0, y + tileSize * 0.3);
+      context.lineTo(x + tileSize * 1.0, y + tileSize * 0.7);
+    } else {
     context.lineTo(x + tileSize * 1.0, y + tileSize * 0.4);
     context.lineTo(x + tileSize * 0.7, y + tileSize * 0.5);
     context.lineTo(x + tileSize * 1.0, y + tileSize * 0.6);
+  }
     context.lineTo(x + tileSize * 0.7, y + tileSize * 0.7);
+    if (spikeD || connectD) {
+      context.lineTo(x + tileSize * 0.7, y + tileSize * 1.0);
+      context.lineTo(x + tileSize * 0.3, y + tileSize * 1.0);
+    } else {
     context.lineTo(x + tileSize * 0.6, y + tileSize * 1.0);
     context.lineTo(x + tileSize * 0.5, y + tileSize * 0.7);
     context.lineTo(x + tileSize * 0.4, y + tileSize * 1.0);
+  }
     context.lineTo(x + tileSize * 0.3, y + tileSize * 0.7);
+    if (spikeL || connectL) {
+      context.lineTo(x + tileSize * 0.0, y + tileSize * 0.7);
+      context.lineTo(x + tileSize * 0.0, y + tileSize * 0.3);
+    } else {
     context.lineTo(x + tileSize * 0.0, y + tileSize * 0.6);
     context.lineTo(x + tileSize * 0.3, y + tileSize * 0.5);
     context.lineTo(x + tileSize * 0.0, y + tileSize * 0.4);
+  }
     context.lineTo(x + tileSize * 0.3, y + tileSize * 0.3);
     context.fill();
   }

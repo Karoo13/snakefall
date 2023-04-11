@@ -1,6 +1,6 @@
 function unreachable() { return new Error("unreachable"); }
 if (typeof VERSION === "undefined") {
-  document.getElementById("versionSpan").innerHTML = "p.1.3";
+  document.getElementById("versionSpan").innerHTML = "p.1.4";
 }
 var canvas = document.getElementById("canvas");
 
@@ -2981,6 +2981,10 @@ function render() {
       connectL = connectL ^ (connectL && connectD && connectLD && (connectU || spikeU));
       connectR = connectR ^ (connectR && connectU && connectRU && (connectD || spikeD));
       connectR = connectR ^ (connectR && connectD && connectRD && (connectU || spikeU));
+      connectL = connectL ^ (connectL && connectU && connectUL);
+      connectL = connectL ^ (connectL && connectD && connectDL);
+      connectR = connectR ^ (connectR && connectU && connectUR);
+      connectR = connectR ^ (connectR && connectD && connectDR);
     } else {
       connectU = connectU || connectUL && !connectUR && spikeD && adjacentTiles[0][2] !== SPIKE;
       connectU = connectU || connectUR && !connectUL && spikeD && adjacentTiles[0][0] !== SPIKE;
@@ -2991,43 +2995,11 @@ function render() {
       connectR = connectR || connectRU && !connectRD && spikeL && adjacentTiles[2][2] !== SPIKE;
       connectR = connectR || connectRD && !connectRU && spikeL && adjacentTiles[0][2] !== SPIKE;
     }
-    /* previous attempt
-    var connectU, connectD, connectL, connectR = false;
-    var spikeU = adjacentTiles[0][1] === SPIKE;
-    var spikeD = adjacentTiles[2][1] === SPIKE;
-    var spikeL = adjacentTiles[1][0] === SPIKE;
-    var spikeR = adjacentTiles[1][2] === SPIKE;
-    var connectUL = adjacentTiles[0][1] === WALL && adjacentTiles[0][0] === WALL || spikeU && (adjacentTiles[0][0] === WALL || adjacentTiles[0][0] === SPIKE);
-    var connectUR = adjacentTiles[0][1] === WALL && adjacentTiles[0][2] === WALL || spikeU && (adjacentTiles[0][2] === WALL || adjacentTiles[0][2] === SPIKE);
-    var connectDL = adjacentTiles[2][1] === WALL && adjacentTiles[2][0] === WALL || spikeD && (adjacentTiles[2][0] === WALL || adjacentTiles[2][0] === SPIKE);
-    var connectDR = adjacentTiles[2][1] === WALL && adjacentTiles[2][2] === WALL || spikeD && (adjacentTiles[2][2] === WALL || adjacentTiles[2][2] === SPIKE);
-    var connectLU = adjacentTiles[1][0] === WALL && adjacentTiles[0][0] === WALL || spikeL && (adjacentTiles[0][0] === WALL || adjacentTiles[0][0] === SPIKE);
-    var connectLD = adjacentTiles[1][0] === WALL && adjacentTiles[2][0] === WALL || spikeL && (adjacentTiles[2][0] === WALL || adjacentTiles[2][0] === SPIKE);
-    var connectRU = adjacentTiles[1][2] === WALL && adjacentTiles[0][2] === WALL || spikeR && (adjacentTiles[0][2] === WALL || adjacentTiles[0][2] === SPIKE);
-    var connectRD = adjacentTiles[1][2] === WALL && adjacentTiles[2][2] === WALL || spikeR && (adjacentTiles[2][2] === WALL || adjacentTiles[2][2] === SPIKE);
-    connectU = adjacentTiles[0][1] === WALL && !(connectLU && connectRU);
-    connectD = adjacentTiles[2][1] === WALL && !(connectLD && connectRD);
-    connectL = adjacentTiles[1][0] === WALL && !(connectUL && connectDL);
-    connectR = adjacentTiles[1][2] === WALL && !(connectUR && connectDR);
-    if (spikeU || spikeD || spikeL || spikeR) {
-      connectU = connectU || adjacentTiles[0][1] === WALL && !connectL && !connectR && !spikeL && !spikeR;
-      connectD = connectD || adjacentTiles[2][1] === WALL && !connectL && !connectR && !spikeL && !spikeR;
-      connectL = connectL || adjacentTiles[1][0] === WALL && !connectU && !connectD && !spikeU && !spikeD;
-      connectR = connectR || adjacentTiles[1][2] === WALL && !connectU && !connectD && !spikeU && !spikeD;
-    }
-    if (connectU && connectLU && (connectR || spikeR) && !spikeD) connectU = false;
-    if (connectU && connectRU && (connectL || spikeL) && !spikeD) connectU = false;
-    if (connectD && connectLD && (connectR || spikeR) && !spikeU) connectD = false;
-    if (connectD && connectRD && (connectL || spikeL) && !spikeU) connectD = false;
-    if (connectL && connectUL && (connectD || spikeD) && !spikeR) connectL = false;
-    if (connectL && connectDL && (connectU || spikeU) && !spikeR) connectL = false;
-    if (connectR && connectUR && (connectD || spikeD) && !spikeL) connectR = false;
-    if (connectR && connectDR && (connectU || spikeU) && !spikeL) connectR = false;
-    if (connectL && connectR && connectUL && connectUR && !spikeU) { connectL = connectR = false; connectU = true; }
-    if (connectL && connectR && connectDL && connectDR && !spikeD) { connectL = connectR = false; connectD = true; }
-    if (connectU && connectD && connectLU && connectLD && !spikeL) { connectU = connectD = false; connectL = true; }
-    if (connectU && connectD && connectRU && connectRD && !spikeR) { connectU = connectD = false; connectR = true; }
-    */
+    connectL = connectL ^ (connectL && connectU && connectUL);
+    connectL = connectL ^ (connectL && connectD && connectDL);
+    connectR = connectR ^ (connectR && connectU && connectUR);
+    connectR = connectR ^ (connectR && connectD && connectDR);
+
     var x = c * tileSize;
     var y = r * tileSize;
     context.fillStyle = "#333";
