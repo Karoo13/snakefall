@@ -1,6 +1,6 @@
 function unreachable() { return new Error("unreachable"); }
 if (typeof VERSION === "undefined") {
-  document.getElementById("versionSpan").innerHTML = "p.1.4";
+  document.getElementById("versionSpan").innerHTML = "r.1.4";
 }
 var canvas = document.getElementById("canvas");
 
@@ -471,6 +471,7 @@ document.addEventListener("keydown", function(event) {
       return;
     case 'KeyE':
       if (modifierMask === SHIFT) { toggleShowEditor(); break; }
+      if (!persistentState.showEditor && modifierMask === 0) { redo(unmoveStuff); break; }
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(SPACE); break; }
       return;
     case "Delete":
@@ -2952,53 +2953,76 @@ function render() {
     var spikeD = adjacentTiles[2][1] === SPIKE;
     var spikeL = adjacentTiles[1][0] === SPIKE;
     var spikeR = adjacentTiles[1][2] === SPIKE;
-    var connectUL = adjacentTiles[0][1] === WALL && adjacentTiles[0][0] === WALL;
-    var connectUR = adjacentTiles[0][1] === WALL && adjacentTiles[0][2] === WALL;
-    var connectDL = adjacentTiles[2][1] === WALL && adjacentTiles[2][0] === WALL;
-    var connectDR = adjacentTiles[2][1] === WALL && adjacentTiles[2][2] === WALL;
-    var connectLU = adjacentTiles[1][0] === WALL && adjacentTiles[0][0] === WALL;
-    var connectLD = adjacentTiles[1][0] === WALL && adjacentTiles[2][0] === WALL;
-    var connectRU = adjacentTiles[1][2] === WALL && adjacentTiles[0][2] === WALL;
-    var connectRD = adjacentTiles[1][2] === WALL && adjacentTiles[2][2] === WALL;
-    connectU = adjacentTiles[0][1] === WALL && !connectUL && !connectUR;
-    connectD = adjacentTiles[2][1] === WALL && !connectDL && !connectDR;
-    connectL = adjacentTiles[1][0] === WALL && !connectLU && !connectLD;
-    connectR = adjacentTiles[1][2] === WALL && !connectRU && !connectRD;
-    if ((spikeU|0) + (spikeD|0) + (spikeL|0) + (spikeR|0) <= 1) { // connected to 1 or 0 other spikes
-      connectU = adjacentTiles[0][1] === WALL && !(connectLU && connectRU);
-      connectD = adjacentTiles[2][1] === WALL && !(connectLD && connectRD);
-      connectL = adjacentTiles[1][0] === WALL && !(connectUL && connectDL);
-      connectR = adjacentTiles[1][2] === WALL && !(connectUR && connectDR);
-      if (connectL && connectR && adjacentTiles[0][1] === WALL && (spikeD || connectLU && connectRU)) { connectL = connectR = false; connectU = true; }
-      if (connectL && connectR && adjacentTiles[2][1] === WALL && (spikeU || connectLD && connectRD)) { connectL = connectR = false; connectD = true; }
-      if (connectU && connectD && adjacentTiles[1][0] === WALL && (spikeR || connectUL && connectDL)) { connectU = connectD = false; connectL = true; }
-      if (connectU && connectD && adjacentTiles[1][2] === WALL && (spikeL || connectUR && connectDR)) { connectU = connectD = false; connectR = true; }
-      connectU = connectU ^ (connectU && connectL && connectUL && (connectR || spikeR));
-      connectU = connectU ^ (connectU && connectR && connectUR && (connectL || spikeL));
-      connectD = connectD ^ (connectD && connectL && connectDL && (connectR || spikeR));
-      connectD = connectD ^ (connectD && connectR && connectDR && (connectL || spikeL));
-      connectL = connectL ^ (connectL && connectU && connectLU && (connectD || spikeD));
-      connectL = connectL ^ (connectL && connectD && connectLD && (connectU || spikeU));
-      connectR = connectR ^ (connectR && connectU && connectRU && (connectD || spikeD));
-      connectR = connectR ^ (connectR && connectD && connectRD && (connectU || spikeU));
-      connectL = connectL ^ (connectL && connectU && connectUL);
-      connectL = connectL ^ (connectL && connectD && connectDL);
-      connectR = connectR ^ (connectR && connectU && connectUR);
-      connectR = connectR ^ (connectR && connectD && connectDR);
-    } else {
-      connectU = connectU || connectUL && !connectUR && spikeD && adjacentTiles[0][2] !== SPIKE;
-      connectU = connectU || connectUR && !connectUL && spikeD && adjacentTiles[0][0] !== SPIKE;
-      connectD = connectD || connectDL && !connectDR && spikeU && adjacentTiles[2][2] !== SPIKE;
-      connectD = connectD || connectDR && !connectDL && spikeU && adjacentTiles[2][0] !== SPIKE;
-      connectL = connectL || connectLU && !connectLD && spikeR && adjacentTiles[2][0] !== SPIKE;
-      connectL = connectL || connectLD && !connectLU && spikeR && adjacentTiles[0][0] !== SPIKE;
-      connectR = connectR || connectRU && !connectRD && spikeL && adjacentTiles[2][2] !== SPIKE;
-      connectR = connectR || connectRD && !connectRU && spikeL && adjacentTiles[0][2] !== SPIKE;
+    var wallU = adjacentTiles[0][1] === WALL;
+    var wallD = adjacentTiles[2][1] === WALL;
+    var wallL = adjacentTiles[1][0] === WALL;
+    var wallR = adjacentTiles[1][2] === WALL;
+    var wallUL = wallU && (adjacentTiles[0][0] === WALL || adjacentTiles[0][0] == null);
+    var wallUR = wallU && (adjacentTiles[0][2] === WALL || adjacentTiles[0][2] == null);
+    var wallDL = wallD && (adjacentTiles[2][0] === WALL || adjacentTiles[2][0] == null);
+    var wallDR = wallD && (adjacentTiles[2][2] === WALL || adjacentTiles[2][2] == null);
+    var wallLU = wallL && (adjacentTiles[0][0] === WALL || adjacentTiles[0][0] == null);
+    var wallLD = wallL && (adjacentTiles[2][0] === WALL || adjacentTiles[2][0] == null);
+    var wallRU = wallR && (adjacentTiles[0][2] === WALL || adjacentTiles[0][2] == null);
+    var wallRD = wallR && (adjacentTiles[2][2] === WALL || adjacentTiles[2][2] == null);
+    var solidUL = wallUL || adjacentTiles[0][0] === SPIKE;
+    var solidUR = wallUR || adjacentTiles[0][2] === SPIKE;
+    var solidDL = wallDL || adjacentTiles[2][0] === SPIKE;
+    var solidDR = wallDR || adjacentTiles[2][2] === SPIKE;
+    var solidLU = wallLU || adjacentTiles[0][0] === SPIKE;
+    var solidLD = wallLD || adjacentTiles[2][0] === SPIKE;
+    var solidRU = wallRU || adjacentTiles[0][2] === SPIKE;
+    var solidRD = wallRD || adjacentTiles[2][2] === SPIKE;
+    switch (0 + spikeU + spikeD + spikeL + spikeR + (spikeU && spikeD) + (spikeL && spikeR)) {
+      case 0: { // no adjacent spikes
+        // connect to each continuous wall, prefer vertical for single and horizontal for multiple
+        // connectU = wallU && (!(wallLU ^ wallRU) || !wallDL && !wallR || !wallDR && !wallL); // connects in fully surrounded case
+        // connectD = wallD && (!(wallLD ^ wallRD) || !wallUL && !wallR || !wallUR && !wallL);
+        connectU = wallU && (!wallLU && !wallRU || !wallDL && !wallR || !wallDR && !wallL || wallLU && wallRU && !(wallDL && wallDR));
+        connectD = wallD && (!wallLD && !wallRD || !wallUL && !wallR || !wallUR && !wallL || wallLD && wallRD && !(wallUL && wallUR));
+        connectL = wallL && !(wallUL && (wallRU || connectU) || wallDL && (wallRD || connectD));
+        connectR = wallR && !(wallUR && (wallLU || connectU) || wallDR && (wallLD || connectD));
+        break;
+      }
+      case 1: { // one adjacent spike
+        // connect straight across if possible, otherwise to sides
+        connectU = wallU && (spikeD || spikeL && !wallR || spikeR && !wallL);
+        connectD = wallD && (spikeU || spikeL && !wallR || spikeR && !wallL);
+        connectL = wallL && (spikeR || spikeU && !wallD || spikeD && !wallU);
+        connectR = wallR && (spikeL || spikeU && !wallD || spikeD && !wallU);
+        break;
+      }
+      case 2: { // two adjacent spikes in L
+        // detect enclosed wall connections or 2x2 spike squares
+        var enclosedU = wallL && solidUR || wallR && solidUL;
+        var enclosedD = wallL && solidDR || wallR && solidDL;
+        var enclosedL = wallU && solidLD || wallD && solidLU;
+        var enclosedR = wallU && solidRD || wallD && solidRU;
+        // connect to unenclosed wall ends or mid-wall spike squares
+        connectU = wallU && !(enclosedU || spikeL && wallUR && solidUL && !enclosedL || spikeR && wallUL && solidUR && !enclosedR);
+        connectD = wallD && !(enclosedD || spikeL && wallDR && solidDL && !enclosedL || spikeR && wallDL && solidDR && !enclosedR);
+        connectL = wallL && !(enclosedL || spikeU && wallLD && solidLU && !enclosedU || spikeD && wallLU && solidLD && !enclosedD || connectU || connectD);
+        connectR = wallR && !(enclosedR || spikeU && wallRD && solidRU && !enclosedU || spikeD && wallRU && solidRD && !enclosedD || connectU || connectD);
+        break;
+      }
+      case 3: { // two adjacent opposite spikes
+        // connect to single walls
+        connectU = wallU && !(wallUL || wallUR || adjacentTiles[0][0] === SPIKE && adjacentTiles[0][2] === SPIKE);
+        connectD = wallD && !(wallDL || wallDR || adjacentTiles[2][0] === SPIKE && adjacentTiles[2][2] === SPIKE);
+        connectL = wallL && !(wallLU || wallLD || adjacentTiles[0][0] === SPIKE && adjacentTiles[2][0] === SPIKE);
+        connectR = wallR && !(wallRU || wallRD || adjacentTiles[0][2] === SPIKE && adjacentTiles[2][2] === SPIKE);
+        break;
+      }
+      case 4: { // three adjacent spikes
+        // connect to single walls or double walls with no opposite spike
+        connectU = wallU && !(solidUL && solidUR || wallUL && adjacentTiles[2][0] === SPIKE || wallUR && adjacentTiles[2][2] === SPIKE);
+        connectD = wallD && !(solidDL && solidDR || wallDL && adjacentTiles[0][0] === SPIKE || wallDR && adjacentTiles[0][2] === SPIKE);
+        connectL = wallL && !(solidLU && solidLD || wallLU && adjacentTiles[0][2] === SPIKE || wallLD && adjacentTiles[2][2] === SPIKE);
+        connectR = wallR && !(solidRU && solidRD || wallRU && adjacentTiles[0][0] === SPIKE || wallRD && adjacentTiles[2][0] === SPIKE);
+        break;
+      }
+      default: break;
     }
-    connectL = connectL ^ (connectL && connectU && connectUL);
-    connectL = connectL ^ (connectL && connectD && connectDL);
-    connectR = connectR ^ (connectR && connectU && connectUR);
-    connectR = connectR ^ (connectR && connectD && connectDR);
 
     var x = c * tileSize;
     var y = r * tileSize;
@@ -3426,7 +3450,8 @@ document.getElementById("touchRestartButton").addEventListener("click", function
 // unmove and remove are holdable
 var holdTimeout = 0;
 var holdInterval = 0;
-document.getElementById("touchUnmoveButton").addEventListener("pointerdown", function() {
+document.getElementById("touchUnmoveButton").addEventListener("pointerdown", function(event) {
+  if (!event.isPrimary) return;
   undo(unmoveStuff);
   render();
   holdTimeout = setTimeout(function() {
@@ -3446,7 +3471,8 @@ document.getElementById("touchUnmoveButton").addEventListener("pointercancel", f
   clearTimeout(holdTimeout);
   clearInterval(holdInterval);
 });
-document.getElementById("touchRemoveButton").addEventListener("pointerdown", function() {
+document.getElementById("touchRemoveButton").addEventListener("pointerdown", function(event) {
+  if (!event.isPrimary) return;
   redo(unmoveStuff);
   render();
   holdTimeout = setTimeout(function() {

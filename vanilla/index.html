@@ -41,14 +41,14 @@
       <tr><td>
         <div id="paradoxDiv" style="background:#f88;"></div>
         Arrows<span id="wasdSpan">/WASD</span> to move
-        <button onpointerdown="event.preventDefault();" id="switchSnakesButton" title="(Shift+)Spacebar, (Shift+)Tab, digits or click while not editing">Switch Snakes</button>
+        <button onpointerdown="event.preventDefault();" id="switchSnakesButton" title="(Shift+)Spacebar, (Shift+)Tab, digits, or click with no edit tool (Esc)">Switch Snakes</button>
         <button onpointerdown="event.preventDefault();" id="showGridButton" title="G">Show Grid</button>
         <button onpointerdown="event.preventDefault();" id="touchControlsButton" title="enable an overlay for touch devices">Touch Input</button>
       </td></tr>
       <tr><td>
-        <button onpointerdown="event.preventDefault();" id="unmoveButton" title="Backspace, Z, Q" disabled>Unmove &lt;&lt;</button>
+        <button onpointerdown="event.preventDefault();" id="unmoveButton" title="Z, Q, Backspace" disabled>Unmove &lt;&lt;</button>
         Moves: <span id="movesSpan">0+0</span>
-        <button onpointerdown="event.preventDefault();" id="removeButton" title="Y, Shift+Backspace, Shift+Z, Shift+Q" disabled>&gt;&gt; Re-move</button>
+        <button onpointerdown="event.preventDefault();" id="removeButton" title="Y, C, E with editor hidden, Shift+Z, Shift+Q, Shift+Backspace" disabled>&gt;&gt; Re-move</button>
         <button onpointerdown="event.preventDefault();" id="restartButton" title="R - unmove to beginning, Shift+R - re-move to end">Restart</button>
         <button onpointerdown="event.preventDefault();" id="saveProgressButton" title="Ctrl+S - save past moves to the browser URL bar, can not save if editor tools were used since the last level save">Save Progress</button>
       </td></tr>
@@ -69,7 +69,7 @@
 
     <div style="margin-top:1em;">This project on Github: <a href="https://github.com/Karoo13/snakefall/">Karoo13/snakefall</a> version <span id="versionSpan">???</span></div>
     <div>Check out some <a href="https://github.com/thejoshwolfe/snakefall/wiki/">community made levels</a>, and share your levels there!</div>
-    <div>Also check out the <a href="https://karoo13.github.io/snakefall/remix/">enhanced version</a> with more puzzle elements.</div>
+    <div>Also check out the <a href="https://karoo13.github.io/snakefall/remix/">enhanced version</a> with more puzzle elements (<a href="javascript:window.location=window.location.pathname.replace('vanilla','remix')+window.location.hash;">transfer url</a>).</div>
     <div>This game is a clone of <a href="https://store.steampowered.com/app/357300/Snakebird/">Snakebird</a> by Noumenon Games.</div>
 
     <div id="visualViewportMirror" style="position:fixed; visibility:hidden; font-size:3vh;">
