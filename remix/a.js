@@ -1785,7 +1785,7 @@ function haveCheatcodesBeenUsed() {
 
 var persistentState = {
   showEditor: false,
-  showGrid: false,
+  showGrid: true,
 };
 function savePersistentState() {
   localStorage.snakefall = JSON.stringify(persistentState);

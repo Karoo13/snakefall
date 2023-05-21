@@ -1698,7 +1698,7 @@ function haveCheatcodesBeenUsed() {
 
 var persistentState = {
   showEditor: false,
-  showGrid: false,
+  showGrid: true,
 };
 function savePersistentState() {
   localStorage.snakefall = JSON.stringify(persistentState);
@@ -2673,36 +2673,36 @@ function render() {
       context.lineTo(x + tileSize * 0.3, y + tileSize * 0.0);
       context.lineTo(x + tileSize * 0.7, y + tileSize * 0.0);
     } else {
-    context.lineTo(x + tileSize * 0.4, y + tileSize * 0.0);
-    context.lineTo(x + tileSize * 0.5, y + tileSize * 0.3);
-    context.lineTo(x + tileSize * 0.6, y + tileSize * 0.0);
+      context.lineTo(x + tileSize * 0.4, y + tileSize * 0.0);
+      context.lineTo(x + tileSize * 0.5, y + tileSize * 0.3);
+      context.lineTo(x + tileSize * 0.6, y + tileSize * 0.0);
     }
     context.lineTo(x + tileSize * 0.7, y + tileSize * 0.3);
     if (spikeR || connectR) {
       context.lineTo(x + tileSize * 1.0, y + tileSize * 0.3);
       context.lineTo(x + tileSize * 1.0, y + tileSize * 0.7);
     } else {
-    context.lineTo(x + tileSize * 1.0, y + tileSize * 0.4);
-    context.lineTo(x + tileSize * 0.7, y + tileSize * 0.5);
-    context.lineTo(x + tileSize * 1.0, y + tileSize * 0.6);
+      context.lineTo(x + tileSize * 1.0, y + tileSize * 0.4);
+      context.lineTo(x + tileSize * 0.7, y + tileSize * 0.5);
+      context.lineTo(x + tileSize * 1.0, y + tileSize * 0.6);
     }
     context.lineTo(x + tileSize * 0.7, y + tileSize * 0.7);
     if (spikeD || connectD) {
       context.lineTo(x + tileSize * 0.7, y + tileSize * 1.0);
       context.lineTo(x + tileSize * 0.3, y + tileSize * 1.0);
     } else {
-    context.lineTo(x + tileSize * 0.6, y + tileSize * 1.0);
-    context.lineTo(x + tileSize * 0.5, y + tileSize * 0.7);
-    context.lineTo(x + tileSize * 0.4, y + tileSize * 1.0);
+      context.lineTo(x + tileSize * 0.6, y + tileSize * 1.0);
+      context.lineTo(x + tileSize * 0.5, y + tileSize * 0.7);
+      context.lineTo(x + tileSize * 0.4, y + tileSize * 1.0);
     }
     context.lineTo(x + tileSize * 0.3, y + tileSize * 0.7);
     if (spikeL || connectL) {
       context.lineTo(x + tileSize * 0.0, y + tileSize * 0.7);
       context.lineTo(x + tileSize * 0.0, y + tileSize * 0.3);
     } else {
-    context.lineTo(x + tileSize * 0.0, y + tileSize * 0.6);
-    context.lineTo(x + tileSize * 0.3, y + tileSize * 0.5);
-    context.lineTo(x + tileSize * 0.0, y + tileSize * 0.4);
+      context.lineTo(x + tileSize * 0.0, y + tileSize * 0.6);
+      context.lineTo(x + tileSize * 0.3, y + tileSize * 0.5);
+      context.lineTo(x + tileSize * 0.0, y + tileSize * 0.4);
     }
     context.lineTo(x + tileSize * 0.3, y + tileSize * 0.3);
     context.fill();
