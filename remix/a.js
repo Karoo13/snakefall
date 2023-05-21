@@ -2015,7 +2015,6 @@ function move(dr, dc) {
   }
 
   pushUndo(unmoveStuff, changeLog);
-  render();
 }
 
 function combineOldAndNewGateOccupations(oldOccupiedOpenGates)

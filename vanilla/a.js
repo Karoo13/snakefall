@@ -1909,7 +1909,6 @@ function move(dr, dc) {
   }
 
   pushUndo(unmoveStuff, changeLog);
-  render();
 }
 
 function checkMovement(pusher, pushedObject, dr, dc, pushedObjects, dyingObjects) {
