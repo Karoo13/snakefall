@@ -1,6 +1,6 @@
 # Snakefall
 
-A [Snakebird](http://snakebird.noumenongames.com/) clone with a level editor.
+A [Snakebird](https://store.steampowered.com/app/357300/Snakebird/) clone with a level editor, forked from [thejoshwolfe/snakefall](https://github.com/thejoshwolfe/snakefall/).
 
 If you haven't played Snakebird yet, go buy it and play it. It's great!
 This project is not trying to compete with the original game,
@@ -9,40 +9,12 @@ of the original game engine design.
 
 This project enables players to create their own levels and share them with others.
 
-## Demo
+## Links
 
-[http://wolfesoftware.com/snakefall/](http://wolfesoftware.com/snakefall/)
+List of levels: [Snakefall Wiki](https://github.com/thejoshwolfe/snakefall/wiki/)
 
-And check out some levels people have made:
+[Original](http://wolfesoftware.com/snakefall/) - original snakefall from thejoshwolfe, no longer maintained
 
-[Snakefall Wiki](https://github.com/thejoshwolfe/snakefall/wiki)
+[Vanilla](https://karoo13.github.io/snakefall/vanilla/) - more updated version of the original repo
 
-## Bugs and Ideas
-
-See the [issue tracker](https://github.com/thejoshwolfe/snakefall/issues).
-
-## Version History
-
-#### 1.1.0
-
-* Ability to share replays. ([issue #9](https://github.com/thejoshwolfe/snakefall/issues/9))
-* Redoing normal movement shows the animation just like if you were playing.
-* Remove "playtest" button and overhaul dirty states.
-* Use semver-like version numbers instead of just linking to the git hash.
-* Finally add a link to the wiki on the actual game page.
-
-#### 1.0.0
-
-* Game Engine:
-  * Everything from the original game (except that the left, right, and top border of the map are impassable).
-  * Undo and redo movement. Repeatedly hitting redo after a reset will effectively show a replay.
-  * Arbitrarily many snakes. A fourth snake color (yellow). More hotkeys for switching snakes.
-  * Size-1 snakes.
-* Editor:
-  * Edit the game while it's running.
-    * Undo/redo edits independently of undo/redo normal movement. Can create time travel paradoxes.
-  * Resize the world.
-  * Select/Cut/Copy/Paste (but not between browser tabs).
-  * Cheatcodes to turn off gravity and collision detection (noclip) while editing.
-  * Share levels with a url that encodes the level. No server-side saving (because there's no server at all).
-
+[Remix](https://karoo13.github.io/snakefall/remix/) - adds new puzzle elements such as 1-way platforms and more

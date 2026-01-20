@@ -27,10 +27,19 @@
           <tr><td><button onpointerdown="event.preventDefault();" id="paintWallButton" title="W">Wall</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="paintSpikeButton" title="S">Spike</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="paintExitButton" title="X">Exit</button></td></tr>
-          <tr><td><button onpointerdown="event.preventDefault();" id="paintFruitButton" title="F">Fruit</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintFruitButton" title="F">Fruit</button>
+                  <button onpointerdown="event.preventDefault();" id="paintPoisonFruitButton" title="Shift+F">Poison</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="paintPortalButton" title="P">Portal</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="paintSnakeButton" title="N - select again to change color">Snake</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="paintBlockButton" title="B - select again to finish placing">Block</button></td></tr>
+          <!-- <tr><td><button onpointerdown="event.preventDefault();" id="paintPlatformButton" title="U - solid to the edges of snakes and blocks">Platform</button></td></tr> -->
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintPlatformUButton" title="U - solid to the edges of snakes and blocks">PlatformU</button><br>
+                  <button onpointerdown="event.preventDefault();" id="paintPlatformLButton" title="H - PlatformL">L</button><button onpointerdown="event.preventDefault();" id="paintPlatformDButton" title="J - PlatformD">D</button><button onpointerdown="event.preventDefault();" id="paintPlatformRButton" title="K - PlatformR">R</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintWoodPlatformButton" title="Shift+U - platform that can be pushed through">WoodPlatform</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintDiggableDirtButton" title="D - can be dug through like fruit">Dirt</button>
+                  <button onpointerdown="event.preventDefault();" id="paintFoamButton" title="Shift+D - can be pushed or teleported into">Foam</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintOpenGateButton" title="O - closes when no longer occupied">OpenGate</button><br>
+                  <button onpointerdown="event.preventDefault();" id="paintClosedGateButton" title="Shift+O - behaves like a wall">ClosedGate</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="cheatGravityButton" title="Shift+G">Gravity: ON</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="cheatCollisionButton" title="Shift+C">Collision: ON</button></td></tr>
         </table>
@@ -69,7 +78,7 @@
 
     <div style="margin-top:1em;">This project on Github: <a href="https://github.com/Karoo13/snakefall/">Karoo13/snakefall</a> version <span id="versionSpan">???</span></div>
     <div>Check out some <a href="https://github.com/thejoshwolfe/snakefall/wiki/">community made levels</a>, and share your levels there!</div>
-    <div>Also check out the <a href="https://karoo13.github.io/snakefall/remix/">enhanced version</a> with more puzzle elements (<a href="javascript:window.location=window.location.pathname.replace('vanilla','remix')+window.location.hash;">transfer url</a>).</div>
+    <div>This is the enhanced version featuring several new puzzle elements.</div>
     <div>This game is a clone of <a href="https://store.steampowered.com/app/357300/Snakebird/">Snakebird</a> by Noumenon Games.</div>
 
     <div id="visualViewportMirror" style="position:fixed; visibility:hidden; font-size:3vh;">
