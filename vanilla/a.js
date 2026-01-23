@@ -2278,7 +2278,7 @@ function render() {
       var loc = parseInt(key);
       var {r, c} = getRowcol(level, loc);
       var collision = portalCollisionMap[key]
-      drawRect(r, c, "#ffffff"); // Placeholder: add white outline
+      drawPortalDiagram(r, c, "#ffffff");
       if (collision) {
         drawX(r, c, "rgba(256, 85, 85, 0.75)");
       }
@@ -2815,19 +2815,48 @@ function render() {
     context.fillStyle = fillStyle;
     context.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
   }
-  function drawX(r, c, fillStyle) {
+  function drawPoly(r, c, points) {
     var x = r * tileSize;
     var y = c * tileSize;
-    var points = [
-      [0.15, 0], [0.5, 0.35], [0.85, 0], [1, 0.15], [0.65, 0.5], [1, 0.85], [0.85, 1],
-      [0.5, 0.65], [0.15, 1], [0, 0.85], [0.35, 0.5], [0, 0.15], [0.15, 0]
-    ];
-    context.fillStyle = fillStyle;
-    context.beginPath();
     context.moveTo(y + points[0][1] * tileSize, x + points[0][0] * tileSize);
     for (var i = 1; i < points.length; i++) {
       context.lineTo(y + points[i][1] * tileSize, x + points[i][0] * tileSize);
     }
+  }
+  function drawPortalDiagram(r, c, fillStyle) {
+    var cornerLU = [
+      [-0.05, -0.05], [0.15, -0.05], [0.15, 0.05], [0.05, 0.05],
+      [0.05, 0.15], [-0.05, 0.15], [-0.05, -0.05]
+    ];
+    var cornerLD = cornerLU.map(function(p) { return [1 - p[0], p[1]]; });     // Mirror Y
+    var cornerRU = cornerLU.map(function(p) { return [p[0], 1 - p[1]]; });     // Mirror X
+    var cornerRD = cornerLU.map(function(p) { return [1 - p[0], 1 - p[1]]; }); // Mirror X & Y
+
+    var sideL = [[0.4, -0.05], [0.6, -0.05], [0.6, 0.05], [0.4, 0.05], [0.4, -0.05]];
+    var sideR = sideL.map(function(p) { return [p[0], 1 - p[1]]; }); // Mirror X
+    var sideU = sideL.map(function(p) { return [p[1], p[0]]; });     // Swap X & Y
+    var sideD = sideL.map(function(p) { return [1 - p[1], p[0]]; }); // Mirror X, swap X & Y
+
+    context.beginPath();
+    drawPoly(r, c, cornerLU);
+    drawPoly(r, c, cornerLD);
+    drawPoly(r, c, cornerRU);
+    drawPoly(r, c, cornerRD);
+    drawPoly(r, c, sideL);
+    drawPoly(r, c, sideR);
+    drawPoly(r, c, sideU);
+    drawPoly(r, c, sideD);
+    context.fillStyle = fillStyle;
+    context.fill();
+  }
+  function drawX(r, c, fillStyle) {
+    context.beginPath();
+    var points = [
+      [0.15, 0], [0.5, 0.35], [0.85, 0], [1, 0.15], [0.65, 0.5], [1, 0.85],
+      [0.85, 1], [0.5, 0.65], [0.15, 1], [0, 0.85], [0.35, 0.5], [0, 0.15], [0.15, 0]
+    ];
+    drawPoly(r, c, points);
+    context.fillStyle = fillStyle;
     context.fill();
   }
 
