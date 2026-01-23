@@ -2276,11 +2276,11 @@ function render() {
   if (Object.keys(portalCollisionMap).length > 0) {
     for (var key in portalCollisionMap) {
       var loc = parseInt(key);
-      var rowcol = getRowcol(level, loc);
+      var {r, c} = getRowcol(level, loc);
       var collision = portalCollisionMap[key]
-      drawRect(rowcol.r, rowcol.c, "#ffffff"); // Placeholder: add white outline
+      drawRect(r, c, "#ffffff"); // Placeholder: add white outline
       if (collision) {
-        drawCircle(rowcol.r, rowcol.c, 0.8, "#ff0000"); // Placeholder: add red X
+        drawX(r, c, "rgba(256, 85, 85, 0.75)");
       }
     }
   }
@@ -2814,6 +2814,21 @@ function render() {
   function drawRect(r, c, fillStyle) {
     context.fillStyle = fillStyle;
     context.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+  }
+  function drawX(r, c, fillStyle) {
+    var x = r * tileSize;
+    var y = c * tileSize;
+    var points = [
+      [0.15, 0], [0.5, 0.35], [0.85, 0], [1, 0.15], [0.65, 0.5], [1, 0.85], [0.85, 1],
+      [0.5, 0.65], [0.15, 1], [0, 0.85], [0.35, 0.5], [0, 0.15], [0.15, 0]
+    ];
+    context.fillStyle = fillStyle;
+    context.beginPath();
+    context.moveTo(y + points[0][1] * tileSize, x + points[0][0] * tileSize);
+    for (var i = 1; i < points.length; i++) {
+      context.lineTo(y + points[i][1] * tileSize, x + points[i][0] * tileSize);
+    }
+    context.fill();
   }
 
   function drawGrid() {
