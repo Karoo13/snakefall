@@ -23,6 +23,9 @@ var level;
 var unmoveStuff = {undoStack:[], redoStack:[], spanId:"movesSpan", undoButtonId:"unmoveButton", redoButtonId:"removeButton"};
 var uneditStuff = {undoStack:[], redoStack:[], spanId:"editsSpan", undoButtonId:"uneditButton", redoButtonId:"reeditButton"};
 var paradoxes = [];
+
+var portalCollisionMap = {};
+
 function loadLevel(newLevel) {
   level = newLevel;
   currentSerializedLevel = compressSerialization(stringifyLevel(newLevel));
@@ -1429,6 +1432,7 @@ function undo(undoStuff) {
   animationQueue = [];
   animationQueueCursor = 0;
   paradoxes = [];
+  portalCollisionMap = {};
   undoOneFrame(undoStuff);
   undoStuffChanged(undoStuff);
 }
@@ -1436,6 +1440,7 @@ function reset(undoStuff) {
   animationQueue = [];
   animationQueueCursor = 0;
   paradoxes = [];
+  portalCollisionMap = {};
   while (undoStuff.undoStack.length > 0) {
     undoOneFrame(undoStuff);
   }
@@ -1738,6 +1743,7 @@ function showEditorChanged() {
 }
 
 function move(dr, dc) {
+  portalCollisionMap = {};
   if (!isAlive()) return;
   animationQueue = [];
   animationQueueCursor = 0;
@@ -2019,21 +2025,42 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
   var otherPortalRowcol = getRowcol(level, otherPortalLocation);
   var delta = {r:otherPortalRowcol.r - portalRowcol.r, c:otherPortalRowcol.c - portalRowcol.c};
 
+  var didCollide = false;
+
   var object = findObjectAtLocation(portalLocation);
   var newLocations = [];
   for (var i = 0; i < object.locations.length; i++) {
     var rowcol = getRowcol(level, object.locations[i]);
     var r = rowcol.r + delta.r;
     var c = rowcol.c + delta.c;
-    if (!isInBounds(level, r, c)) return false; // out of bounds
-    newLocations.push(getLocation(level, r, c));
+
+    // out of bounds
+    if (!isInBounds(level, r, c)) {
+      didCollide = true;
+      continue;
+    }
+
+    var loc = getLocation(level, r, c)
+    newLocations.push(loc);
+    portalCollisionMap[loc] = false
+
+    // blocked by tile
+    if (!isTileCodeAir(level.map[loc])) {
+      didCollide = true;
+      portalCollisionMap[loc] = true;
+    }
+
+    // blocked by object
+    var otherObject = findObjectAtLocation(loc);
+    if (otherObject != null && otherObject !== object) {
+      didCollide = true;
+      portalCollisionMap[loc] = true;
+    }
   }
 
-  for (var i = 0; i < newLocations.length; i++) {
-    var location = newLocations[i];
-    if (!isTileCodeAir(level.map[location])) return false; // blocked by tile
-    var otherObject = findObjectAtLocation(location);
-    if (otherObject != null && otherObject !== object) return false; // blocked by object
+  // teleport blocked
+  if (didCollide) {
+    return false;
   }
 
   // zappo presto!
@@ -2046,6 +2073,8 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
     delta.r,
     delta.c,
   ]);
+
+  portalCollisionMap = {};
   return true;
 }
 
@@ -2242,6 +2271,19 @@ function render() {
 
   // normal render
   renderLevel();
+
+  // draw portal collision diagram
+  if (Object.keys(portalCollisionMap).length > 0) {
+    for (var key in portalCollisionMap) {
+      var loc = parseInt(key);
+      var rowcol = getRowcol(level, loc);
+      var collision = portalCollisionMap[key]
+      drawRect(rowcol.r, rowcol.c, "#ffffff"); // Placeholder: add white outline
+      if (collision) {
+        drawCircle(rowcol.r, rowcol.c, 0.8, "#ff0000"); // Placeholder: add red X
+      }
+    }
+  }
 
   if (persistentState.showGrid && persistentState.showEditor) {
     drawGrid();
