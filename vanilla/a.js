@@ -25,6 +25,7 @@ var uneditStuff = {undoStack:[], redoStack:[], spanId:"editsSpan", undoButtonId:
 var paradoxes = [];
 
 var portalCollisionMap = {};
+var portalsBlocked = false;
 
 function loadLevel(newLevel) {
   level = newLevel;
@@ -1433,6 +1434,7 @@ function undo(undoStuff) {
   animationQueueCursor = 0;
   paradoxes = [];
   portalCollisionMap = {};
+  portalsBlocked = false;
   undoOneFrame(undoStuff);
   undoStuffChanged(undoStuff);
 }
@@ -1441,6 +1443,7 @@ function reset(undoStuff) {
   animationQueueCursor = 0;
   paradoxes = [];
   portalCollisionMap = {};
+  portalsBlocked = false;
   while (undoStuff.undoStack.length > 0) {
     undoOneFrame(undoStuff);
   }
@@ -1744,6 +1747,7 @@ function showEditorChanged() {
 
 function move(dr, dc) {
   portalCollisionMap = {};
+  portalsBlocked = false;
   if (!isAlive()) return;
   animationQueue = [];
   animationQueueCursor = 0;
@@ -1841,6 +1845,9 @@ function move(dr, dc) {
         animationQueue.push(portalAnimations);
       }
       portalActivationLocations = [];
+    }
+    if (portalActivationLocations.length === 2) {
+      portalsBlocked = true;
     }
     // now do falling logic
     var didAnything = false;
@@ -2015,6 +2022,9 @@ function moveObjects(objects, dr, dc, portalLocations, portalActivationLocations
     if (activatingPortals.length === 1) {
       // exactly one new portal we're touching. activate it
       portalActivationLocations.push(activatingPortals[0]);
+    }
+    if (activatingPortals.length === 2) {
+      portalsBlocked = true;
     }
   });
 }
@@ -2283,6 +2293,14 @@ function render() {
         drawX(r, c, "rgba(256, 85, 85, 0.75)");
       }
     }
+  }
+  // draw indicator that both ends of the portal were touched at the same time
+  if (portalsBlocked) {
+    var portalLocs = getPortalLocations();
+    var rowcol1 = getRowcol(level, portalLocs[0]);
+    var rowcol2 = getRowcol(level, portalLocs[1]);
+    drawX(rowcol1.r, rowcol1.c, "rgba(256, 85, 85, 0.75)");
+    drawX(rowcol2.r, rowcol2.c, "rgba(256, 85, 85, 0.75)");
   }
 
   if (persistentState.showGrid && persistentState.showEditor) {
