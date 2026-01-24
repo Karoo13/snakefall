@@ -2039,6 +2039,11 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
 
   var object = findObjectAtLocation(portalLocation);
   var newLocations = [];
+
+  // only added to the global map if there is at least one collision (or OOB),
+  // so that diagram isn't drawn on successful teleport
+  var collisionDiagram = {};
+
   for (var i = 0; i < object.locations.length; i++) {
     var rowcol = getRowcol(level, object.locations[i]);
     var r = rowcol.r + delta.r;
@@ -2052,24 +2057,26 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
 
     var loc = getLocation(level, r, c)
     newLocations.push(loc);
-    portalCollisionMap[loc] = false
+    collisionDiagram[loc] = false
 
     // blocked by tile
     if (!isTileCodeAir(level.map[loc])) {
       didCollide = true;
-      portalCollisionMap[loc] = true;
+      collisionDiagram[loc] = true;
     }
 
     // blocked by object
     var otherObject = findObjectAtLocation(loc);
     if (otherObject != null && otherObject !== object) {
       didCollide = true;
-      portalCollisionMap[loc] = true;
+      collisionDiagram[loc] = true;
     }
   }
 
   // teleport blocked
   if (didCollide) {
+    // this diagram will be drawn
+    portalCollisionMap = { ...portalCollisionMap, ...collisionDiagram };
     return false;
   }
 
@@ -2084,7 +2091,6 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
     delta.c,
   ]);
 
-  portalCollisionMap = {};
   return true;
 }
 
