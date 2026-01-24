@@ -34,6 +34,10 @@ var level;
 var unmoveStuff = {undoStack:[], redoStack:[], spanId:"movesSpan", undoButtonId:"unmoveButton", redoButtonId:"removeButton"};
 var uneditStuff = {undoStack:[], redoStack:[], spanId:"editsSpan", undoButtonId:"uneditButton", redoButtonId:"reeditButton"};
 var paradoxes = [];
+
+var portalCollisionMap = {};
+var portalsBlocked = false;
+
 function loadLevel(newLevel) {
   level = newLevel;
   currentSerializedLevel = compressSerialization(stringifyLevel(newLevel));
@@ -1513,6 +1517,8 @@ function undo(undoStuff) {
   animationQueue = [];
   animationQueueCursor = 0;
   paradoxes = [];
+  portalCollisionMap = {};
+  portalsBlocked = false;
   undoOneFrame(undoStuff);
   undoStuffChanged(undoStuff);
 }
@@ -1520,6 +1526,8 @@ function reset(undoStuff) {
   animationQueue = [];
   animationQueueCursor = 0;
   paradoxes = [];
+  portalCollisionMap = {};
+  portalsBlocked = false;
   while (undoStuff.undoStack.length > 0) {
     undoOneFrame(undoStuff);
   }
@@ -1825,6 +1833,8 @@ function showEditorChanged() {
 }
 
 function move(dr, dc) {
+  portalCollisionMap = {};
+  portalsBlocked = false;
   if (!isAlive()) return;
   animationQueue = [];
   animationQueueCursor = 0;
@@ -1938,6 +1948,9 @@ function move(dr, dc) {
         animationQueue.push(portalAnimations);
       }
       portalActivationLocations = [];
+    }
+    if (portalActivationLocations.length === 2) {
+      portalsBlocked = true;
     }
     // now do falling logic
     var didAnything = false;
@@ -2149,6 +2162,9 @@ function moveObjects(objects, dr, dc, portalLocations, portalActivationLocations
       // exactly one new portal we're touching. activate it
       portalActivationLocations.push(activatingPortals[0]);
     }
+    if (activatingPortals.length === 2) {
+      portalsBlocked = true;
+    }
   });
 }
 
@@ -2158,21 +2174,49 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
   var otherPortalRowcol = getRowcol(level, otherPortalLocation);
   var delta = {r:otherPortalRowcol.r - portalRowcol.r, c:otherPortalRowcol.c - portalRowcol.c};
 
+  var didCollide = false;
+
   var object = findObjectAtLocation(portalLocation);
   var newLocations = [];
+
+  // only added to the global map if there is at least one collision (or OOB),
+  // so that diagram isn't drawn on successful teleport
+  var collisionDiagram = {};
+
   for (var i = 0; i < object.locations.length; i++) {
     var rowcol = getRowcol(level, object.locations[i]);
     var r = rowcol.r + delta.r;
     var c = rowcol.c + delta.c;
-    if (!isInBounds(level, r, c)) return false; // out of bounds
-    newLocations.push(getLocation(level, r, c));
+
+    // out of bounds
+    if (!isInBounds(level, r, c)) {
+      didCollide = true;
+      continue;
+    }
+
+    var loc = getLocation(level, r, c)
+    newLocations.push(loc);
+    collisionDiagram[loc] = false
+
+    // blocked by tile
+    if (!isTileCodeAir(object, null, level.map[loc], 0, 0)) {
+      didCollide = true;
+      collisionDiagram[loc] = true;
+    }
+
+    // blocked by object
+    var otherObject = findObjectAtLocation(loc);
+    if (otherObject != null && otherObject !== object) {
+      didCollide = true;
+      collisionDiagram[loc] = true;
+    }
   }
 
-  for (var i = 0; i < newLocations.length; i++) {
-    var location = newLocations[i];
-    if (!isTileCodeAir(object, null, level.map[location], 0, 0)) return false; // blocked by tile
-    var otherObject = findObjectAtLocation(location);
-    if (otherObject != null && otherObject !== object) return false; // blocked by object
+  // teleport blocked
+  if (didCollide) {
+    // this diagram will be drawn
+    portalCollisionMap = { ...portalCollisionMap, ...collisionDiagram };
+    return false;
   }
 
   // zappo presto!
@@ -2185,6 +2229,7 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
     delta.r,
     delta.c,
   ]);
+
   return true;
 }
 
@@ -2431,6 +2476,27 @@ function render() {
 
   // normal render
   renderLevel();
+
+  // draw portal collision diagram
+  if (Object.keys(portalCollisionMap).length > 0) {
+    for (var key in portalCollisionMap) {
+      var loc = parseInt(key);
+      var {r, c} = getRowcol(level, loc);
+      var collision = portalCollisionMap[key]
+      drawPortalDiagram(r, c, "#ffffff");
+      if (collision) {
+        drawX(r, c, "rgba(256, 85, 85, 0.75)");
+      }
+    }
+  }
+  // draw indicator that both ends of the portal were touched at the same time
+  if (portalsBlocked) {
+    var portalLocs = getPortalLocations();
+    var rowcol1 = getRowcol(level, portalLocs[0]);
+    var rowcol2 = getRowcol(level, portalLocs[1]);
+    drawX(rowcol1.r, rowcol1.c, "rgba(256, 85, 85, 0.75)");
+    drawX(rowcol2.r, rowcol2.c, "rgba(256, 85, 85, 0.75)");
+  }
 
   if (persistentState.showGrid && persistentState.showEditor) {
     drawGrid();
@@ -3165,6 +3231,50 @@ function render() {
   function drawRect(r, c, fillStyle) {
     context.fillStyle = fillStyle;
     context.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+  }
+  function drawPoly(r, c, points) {
+    var x = r * tileSize;
+    var y = c * tileSize;
+    context.moveTo(y + points[0][1] * tileSize, x + points[0][0] * tileSize);
+    for (var i = 1; i < points.length; i++) {
+      context.lineTo(y + points[i][1] * tileSize, x + points[i][0] * tileSize);
+    }
+  }
+  function drawPortalDiagram(r, c, fillStyle) {
+    var cornerLU = [
+      [-0.05, -0.05], [0.15, -0.05], [0.15, 0.05], [0.05, 0.05],
+      [0.05, 0.15], [-0.05, 0.15], [-0.05, -0.05]
+    ];
+    var cornerLD = cornerLU.map(function(p) { return [1 - p[0], p[1]]; });     // Mirror Y
+    var cornerRU = cornerLU.map(function(p) { return [p[0], 1 - p[1]]; });     // Mirror X
+    var cornerRD = cornerLU.map(function(p) { return [1 - p[0], 1 - p[1]]; }); // Mirror X & Y
+
+    var sideL = [[0.4, -0.05], [0.6, -0.05], [0.6, 0.05], [0.4, 0.05], [0.4, -0.05]];
+    var sideR = sideL.map(function(p) { return [p[0], 1 - p[1]]; }); // Mirror X
+    var sideU = sideL.map(function(p) { return [p[1], p[0]]; });     // Swap X & Y
+    var sideD = sideL.map(function(p) { return [1 - p[1], p[0]]; }); // Mirror X, swap X & Y
+
+    context.beginPath();
+    drawPoly(r, c, cornerLU);
+    drawPoly(r, c, cornerLD);
+    drawPoly(r, c, cornerRU);
+    drawPoly(r, c, cornerRD);
+    drawPoly(r, c, sideL);
+    drawPoly(r, c, sideR);
+    drawPoly(r, c, sideU);
+    drawPoly(r, c, sideD);
+    context.fillStyle = fillStyle;
+    context.fill();
+  }
+  function drawX(r, c, fillStyle) {
+    context.beginPath();
+    var points = [
+      [0.15, 0], [0.5, 0.35], [0.85, 0], [1, 0.15], [0.65, 0.5], [1, 0.85],
+      [0.85, 1], [0.5, 0.65], [0.15, 1], [0, 0.85], [0.35, 0.5], [0, 0.15], [0.15, 0]
+    ];
+    drawPoly(r, c, points);
+    context.fillStyle = fillStyle;
+    context.fill();
   }
 
   function drawGrid() {
