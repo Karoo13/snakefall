@@ -1479,10 +1479,12 @@ function unreset(undoStuff) {
   }
   undoStuffChanged(undoStuff);
 
-  // don't animate the last frame
-  animationQueue = [];
-  animationQueueCursor = 0;
-  freshlyRemovedAnimatedObjects = [];
+  // don't animate the last frame unless dying
+  if (!isDead()) {
+    animationQueue = [];
+    animationQueueCursor = 0;
+    freshlyRemovedAnimatedObjects = [];
+  }
 }
 function redoOneFrame(undoStuff) {
   var doThis = undoStuff.redoStack.pop();
@@ -1509,7 +1511,7 @@ function undoChanges(changes, changeLog) {
     animationQueue = lastChange[4];
     animationQueueCursor = 0;
     freshlyRemovedAnimatedObjects = lastChange[5];
-    animationStart = new Date().getTime();
+    animationStart = performance.now();
   }
 
   function undoChange(change) {
@@ -1754,7 +1756,7 @@ function move(dr, dc) {
   animationQueue = [];
   animationQueueCursor = 0;
   freshlyRemovedAnimatedObjects = [];
-  animationStart = new Date().getTime();
+  animationStart = performance.now();
   var activeSnake = findActiveSnake();
   var headRowcol = getRowcol(level, activeSnake.locations[0]);
   var newRowcol = {r:headRowcol.r + dr, c:headRowcol.c + dc};
@@ -2248,7 +2250,7 @@ var animationQueue = [
   // ],
 ];
 var animationQueueCursor = 0;
-var animationStart = null; // new Date().getTime()
+var animationStart = null; // performance.now()
 var animationProgress; // 0.0 <= x < 1.0
 var freshlyRemovedAnimatedObjects = [];
 
@@ -2265,8 +2267,8 @@ function render() {
   if (level == null) return;
   if (animationQueueCursor < animationQueue.length) {
     var animationDuration = animationQueue[animationQueueCursor][0];
-    animationProgress = (new Date().getTime() - animationStart) / animationDuration;
-    if (animationProgress >= 1.0) {
+    animationProgress = (performance.now() - animationStart) / animationDuration;
+    while (animationProgress >= 1.0) {
       // animation group complete
       animationProgress -= 1.0;
       animationQueueCursor++;
@@ -2274,7 +2276,7 @@ function render() {
         var infiniteLoopSize = animationQueue[animationQueueCursor][1][1];
         animationQueueCursor -= infiniteLoopSize;
       }
-      animationStart = new Date().getTime();
+      animationStart = performance.now();
     }
   }
   if (animationQueueCursor === animationQueue.length) animationProgress = 1.0;
@@ -3110,10 +3112,10 @@ function loadFromLocationHash() {
 }
 
 // run test suite
-var testTime = new Date().getTime();
+var testTime = performance.now();
 if (compressSerialization(stringifyLevel(parseLevel(testLevel_v0))) !== testLevel_v0_converted) throw new Error("v0 level conversion is broken");
 // ask the debug console for this variable if you're concerned with how much time this wastes.
-testTime = new Date().getTime() - testTime;
+testTime = performance.now() - testTime;
 
 loadPersistentState();
 if (!loadFromLocationHash()) {
