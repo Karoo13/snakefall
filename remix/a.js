@@ -2399,16 +2399,16 @@ function isAlive() {
 }
 
 var snakeColors = [
-  "#f00",
-  "#0f0",
-  "#00f",
-  "#ff0",
-  "#f0f",
-  "#0ff",
-  "#80f",
-  "#f80",
-  "#000",
-  "#fff",
+  "#ff0000",
+  "#00ff00",
+  "#0000ff",
+  "#ffff00",
+  "#ff00ff",
+  "#00ffff",
+  "#8000ff",
+  "#ff8000",
+  "#000000",
+  "#ffffff",
 ];
 var snakeColorNames = [
   "Red",
@@ -2422,9 +2422,8 @@ var snakeColorNames = [
   "Black",
   "White",
 ];
-var blockForeground = ["#de5a6d","#fa65dd","#c367e3","#9c62fa","#625ff0","#79c13a","#ccbf4b","#e08645"];
-var blockBackground = ["#853641","#963c84","#753d88","#5d3a96","#3a3990","#436b21","#756c2b","#8c532b"];
-
+var blockForeground = ["#de5a6d","#fa65dd","#c764eb","#9c62fa","#625ff0","#27935c","#79c13a","#ccbf4b","#e08645","#9fb9f9"];
+var blockBackground = ["#853641","#963c84","#773c8d","#5d3a96","#3a3990","#175837","#487322","#7a722d","#865029","#5f6f95"];
 
 var activeSnakeId = null;
 
