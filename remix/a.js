@@ -634,6 +634,12 @@ function toggleShowEditor() {
   savePersistentState();
   showEditorChanged();
 }
+
+document.getElementById("toggleDarkLight").textContent =
+  window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "Light"
+    : "Dark";
+
 function toggleDarkLight() {
   if (document.getElementById("toggleDarkLight").textContent === "Light") {
     document.documentElement.dataset.theme = "light";
