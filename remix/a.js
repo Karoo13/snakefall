@@ -583,6 +583,8 @@ document.getElementById("switchSnakesButton").addEventListener("click", function
   render();
 });
 function switchSnakes(delta) {
+  portalCollisionMap = {};
+  portalsBlocked = false;
   if (!isAlive()) return;
   var snakes = getSnakes();
   snakes.sort(compareId);
@@ -1934,7 +1936,7 @@ function move(dr, dc) {
   if (isGravity()) for (var fallHeight = 1;; fallHeight++) {
     var serializedState = serializeObjects(level.objects);
     var infiniteLoopStartIndex = stateToAnimationIndex[serializedState];
-    if (infiniteLoopStartIndex != null) {
+    if (infiniteLoopStartIndex > 1) {
       // infinite loop
       animationQueue.push([0, [INFINITE_LOOP, animationQueue.length - infiniteLoopStartIndex]]);
       break;
@@ -1951,6 +1953,7 @@ function move(dr, dc) {
     }
     if (portalActivationLocations.length === 2) {
       portalsBlocked = true;
+      portalActivationLocations = [];
     }
     // now do falling logic
     var didAnything = false;
@@ -2222,6 +2225,12 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
   // zappo presto!
   var oldState = serializeObjectState(object);
   object.locations = newLocations;
+  for (var i = 0; i < newLocations.length; i++) {
+    if (level.map[newLocations[i]] === FOAM)
+    {
+      paintTileAtLocation(object.locations[i], SPACE, changeLog);
+    }
+  }
   changeLog.push([object.type, object.id, oldState, serializeObjectState(object)]);
   animations.push([
     "t" + object.type, // TELEPORT_SNAKE | TELEPORT_BLOCK

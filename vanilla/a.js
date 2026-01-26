@@ -544,6 +544,8 @@ document.getElementById("switchSnakesButton").addEventListener("click", function
   render();
 });
 function switchSnakes(delta) {
+  portalCollisionMap = {};
+  portalsBlocked = false;
   if (!isAlive()) return;
   var snakes = getSnakes();
   snakes.sort(compareId);
@@ -1831,7 +1833,7 @@ function move(dr, dc) {
   if (isGravity()) for (var fallHeight = 1;; fallHeight++) {
     var serializedState = serializeObjects(level.objects);
     var infiniteLoopStartIndex = stateToAnimationIndex[serializedState];
-    if (infiniteLoopStartIndex != null) {
+    if (infiniteLoopStartIndex > 1) {
       // infinite loop
       animationQueue.push([0, [INFINITE_LOOP, animationQueue.length - infiniteLoopStartIndex]]);
       break;
@@ -1848,6 +1850,7 @@ function move(dr, dc) {
     }
     if (portalActivationLocations.length === 2) {
       portalsBlocked = true;
+      portalActivationLocations = [];
     }
     // now do falling logic
     var didAnything = false;
