@@ -1,28 +1,35 @@
 function unreachable() { return new Error("unreachable"); }
 if (typeof VERSION === "undefined") {
-  document.getElementById("versionSpan").innerHTML = "v.1.4";
+  document.getElementById("versionSpan").innerHTML = "v.1.5";
 }
-var canvas = document.getElementById("canvas");
+const canvas = document.getElementById("canvas");
+const saveLevelButton = document.getElementById("saveLevelButton");
+const saveProgressButton = document.getElementById("saveProgressButton");
+const visualViewportMirror = document.getElementById("visualViewportMirror");
 
 // tile codes
-var SPACE = 0;
-var WALL = 1;
-var SPIKE = 2;
-var FRUIT_v0 = 3; // legacy
-var EXIT = 4;
-var PORTAL = 5;
-var validTileCodes = [SPACE, WALL, SPIKE, EXIT, PORTAL];
+const SPACE = 0;
+const WALL = 1;
+const SPIKE = 2;
+const FRUIT_v0 = 3; // legacy
+const EXIT = 4;
+const PORTAL = 5;
+const validTileCodes = [SPACE, WALL, SPIKE, FRUIT_v0, EXIT, PORTAL];
 
 // object types
-var SNAKE = "s";
-var BLOCK = "b";
-var FRUIT = "f";
+const SNAKE = "s";
+const BLOCK = "b";
+const FRUIT = "f";
 
-var tileSize = 30;
-var level;
-var unmoveStuff = {undoStack:[], redoStack:[], spanId:"movesSpan", undoButtonId:"unmoveButton", redoButtonId:"removeButton"};
-var uneditStuff = {undoStack:[], redoStack:[], spanId:"editsSpan", undoButtonId:"uneditButton", redoButtonId:"reeditButton"};
-var paradoxes = [];
+const tileSize = 30;
+let level;
+const unmoveStuff = {undoStack:[], redoStack:[], spanId:"movesSpan", undoButtonId:"unmoveButton", redoButtonId:"removeButton"};
+const uneditStuff = {undoStack:[], redoStack:[], spanId:"editsSpan", undoButtonId:"uneditButton", redoButtonId:"reeditButton"};
+let paradoxes = [];
+
+let portalCollisionMap = {};
+let portalsBlocked = false;
+
 function loadLevel(newLevel) {
   level = newLevel;
   currentSerializedLevel = compressSerialization(stringifyLevel(newLevel));
@@ -39,41 +46,40 @@ function loadLevel(newLevel) {
 }
 
 
-var magicNumber_v0 = "3tFRIoTU";
-var magicNumber    = "HyRr4JK1";
-var exampleLevel = magicNumber + "&" +
-  "17&31" +
-  "?" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000000000000000" +
-    "0000000000000000000040000000000" +
-    "0000000000000110000000000000000" +
-    "0000000000000111100000000000000" +
-    "0000000000000011000000000000000" +
-    "0000000000000010000010000000000" +
-    "0000000000000010100011000000000" +
-    "0000001111111000110000000110000" +
-    "0000011111111111111111111110000" +
-    "0000011111111101111111111100000" +
-    "0000001111111100111111111100000" +
-    "0000001111111000111111111100000" +
-  "/" +
-  "s0 ?351&350&349/" +
-  "f0 ?328/" +
-  "f1 ?366/";
+const magicNumber_v0 = "3tFRIoTU";
+const magicNumber    = "HyRr4JK1";
+const exampleLevel = magicNumber + `&17&31
+?
+  0000000000000000000000000000000
+  0000000000000000000000000000000
+  0000000000000000000000000000000
+  0000000000000000000000000000000
+  0000000000000000000000000000000
+  0000000000000000000000000000000
+  0000000000000000000040000000000
+  0000000000000110000000000000000
+  0000000000000111100000000000000
+  0000000000000011000000000000000
+  0000000000000010000010000000000
+  0000000000000010100011000000000
+  0000001111111000110000000110000
+  0000011111111111111111111110000
+  0000011111111101111111111100000
+  0000001111111100111111111100000
+  0000001111111000111111111100000
+/
+s0 ?351&350&349/
+f0 ?328/
+f1 ?366/`;
 
-var testLevel_v0 = "3tFRIoTU&5&5?0005*00300024005*001000/b0?7&6&15&23/s3?18/s0?1&0&5/s1?2/s4?10/s2?17/b2?9/b3?14/b4?19/b1?4&20/b5?24/";
-var testLevel_v0_converted = "HyRr4JK1&5&5?0005*4024005*001000/b0?7&6&15&23/s3?18/s0?1&0&5/s1?2/s4?10/s2?17/b2?9/b3?14/b4?19/b1?4&20/b5?24/f0?8/";
+const testLevel_v0 = "3tFRIoTU&5&5?0005*00300024005*001000/b0?7&6&15&23/s3?18/s0?1&0&5/s1?2/s4?10/s2?17/b2?9/b3?14/b4?19/b1?4&20/b5?24/";
+const testLevel_v0_converted = "HyRr4JK1&5&5?0005*4024005*001000/b0?7&6&15&23/s3?18/s0?1&0&5/s1?2/s4?10/s2?17/b2?9/b3?14/b4?19/b1?4&20/b5?24/f0?8/";
 
 function parseLevel(string) {
   // magic number
-  var cursor = 0;
+  let cursor = 0;
   skipWhitespace();
-  var versionTag = string.substr(cursor, magicNumber.length);
+  const versionTag = string.substr(cursor, magicNumber.length);
   switch (versionTag) {
     case magicNumber_v0:
     case magicNumber: break;
@@ -82,7 +88,7 @@ function parseLevel(string) {
   cursor += magicNumber.length;
   consumeKeyword("&");
 
-  var level = {
+  const level = {
     height: -1,
     width: -1,
     map: [],
@@ -95,13 +101,13 @@ function parseLevel(string) {
   level.width = readInt();
 
   // map
-  var mapData = readRun();
+  let mapData = readRun();
   mapData = decompressSerialization(mapData);
   if (level.height * level.width !== mapData.length) throw parserError("height, width, and map.length do not jive");
-  var upconvertedObjects = [];
-  var fruitCount = 0;
-  for (var i = 0; i < mapData.length; i++) {
-    var tileCode = mapData[i].charCodeAt(0) - "0".charCodeAt(0);
+  const upconvertedObjects = [];
+  let fruitCount = 0;
+  for (let i = 0; i < mapData.length; i++) {
+    let tileCode = mapData[i].charCodeAt(0) - "0".charCodeAt(0);
     if (tileCode === FRUIT_v0 && versionTag === magicNumber_v0) {
       // fruit used to be a tile code. now it's an object.
       upconvertedObjects.push({
@@ -119,7 +125,7 @@ function parseLevel(string) {
   // objects
   skipWhitespace();
   while (cursor < string.length) {
-    var object = {
+    const object = {
       type: "?",
       id: -1,
       dead: false,
@@ -128,7 +134,7 @@ function parseLevel(string) {
 
     // type
     object.type = string[cursor];
-    var locationsLimit;
+    let locationsLimit;
     if      (object.type === SNAKE) locationsLimit = -1;
     else if (object.type === BLOCK) locationsLimit = -1;
     else if (object.type === FRUIT) locationsLimit = 1;
@@ -139,13 +145,13 @@ function parseLevel(string) {
     object.id = readInt();
 
     // locations
-    var locationsData = readRun();
-    var locationStrings = locationsData.split("&");
+    const locationsData = readRun();
+    const locationStrings = locationsData.split("&");
     if (locationStrings.length === 0) throw parserError("locations must be non-empty");
     if (locationsLimit !== -1 && locationStrings.length > locationsLimit) throw parserError("too many locations");
 
     locationStrings.forEach(function(locationString) {
-      var location = parseInt(locationString);
+      const location = parseInt(locationString);
       if (!(0 <= location && location < level.map.length)) throw parserError("location out of bounds: " + JSON.stringify(locationString));
       object.locations.push(location);
     });
@@ -153,7 +159,7 @@ function parseLevel(string) {
     level.objects.push(object);
     skipWhitespace();
   }
-  for (var i = 0; i < upconvertedObjects.length; i++) {
+  for (let i = 0; i < upconvertedObjects.length; i++) {
     level.objects.push(upconvertedObjects[i]);
   }
 
@@ -171,18 +177,19 @@ function parseLevel(string) {
   }
   function readInt() {
     skipWhitespace();
-    for (var i = cursor; i < string.length; i++) {
+    let i = cursor;
+    for (; i < string.length; i++) {
       if ("0123456789".indexOf(string[i]) === -1) break;
     }
-    var substring = string.substring(cursor, i);
+    const substring = string.substring(cursor, i);
     if (substring.length === 0) throw parserError("expected int");
     cursor = i;
     return parseInt(substring, 10);
   }
   function readRun() {
     consumeKeyword("?");
-    var endIndex = string.indexOf("/", cursor);
-    var substring = string.substring(cursor, endIndex);
+    const endIndex = string.indexOf("/", cursor);
+    const substring = string.substring(cursor, endIndex);
     cursor = endIndex + 1;
     return substring;
   }
@@ -192,11 +199,11 @@ function parseLevel(string) {
 }
 
 function stringifyLevel(level) {
-  var output = magicNumber + "&";
+  let output = magicNumber + "&";
   output += level.height + "&" + level.width + "\n";
 
   output += "?\n";
-  for (var r = 0; r < level.height; r++) {
+  for (let r = 0; r < level.height; r++) {
     output += "  " + level.map.slice(r * level.width, (r + 1) * level.width).join("") + "\n";
   }
   output += "/\n";
@@ -204,15 +211,15 @@ function stringifyLevel(level) {
   output += serializeObjects(level.objects);
 
   // sanity check
-  var shouldBeTheSame = parseLevel(output);
+  const shouldBeTheSame = parseLevel(output);
   if (!deepEquals(level, shouldBeTheSame)) throw unreachable(); // serialization/deserialization is broken
 
   return output;
 }
 function serializeObjects(objects) {
-  var output = "";
-  for (var i = 0; i < objects.length; i++) {
-    var object = objects[i];
+  let output = "";
+  for (let i = 0; i < objects.length; i++) {
+    const object = objects[i];
     output += object.type + object.id + " ";
     output += "?" + object.locations.join("&") + "/\n";
   }
@@ -223,15 +230,15 @@ function serializeObjectState(object) {
   return [object.dead, copyArray(object.locations)];
 }
 
-var base66 = "----0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const base66 = "----0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 function compressSerialization(string) {
   string = string.replace(/\s+/g, "");
   // run-length encode several 0's in a row, etc.
   // 2000000000000003 -> 2*A03 ("A" is 14 in base66 defined above)
-  var result = "";
-  var runStart = 0;
-  for (var i = 1; i < string.length + 1; i++) {
-    var runLength = i - runStart;
+  let result = "";
+  let runStart = 0;
+  for (let i = 1; i < string.length + 1; i++) {
+    const runLength = i - runStart;
     if (string[i] === string[runStart] && runLength < base66.length - 1) continue;
     // end of run
     if (runLength >= 4) {
@@ -247,14 +254,14 @@ function compressSerialization(string) {
 }
 function decompressSerialization(string) {
   string = string.replace(/\s+/g, "");
-  var result = "";
-  for (var i = 0; i < string.length; i++) {
+  let result = "";
+  for (let i = 0; i < string.length; i++) {
     if (string[i] === "*") {
       i += 1;
-      var runLength = base66.indexOf(string[i]);
+      const runLength = base66.indexOf(string[i]);
       i += 1;
-      var char = string[i];
-      for (var j = 0; j < runLength; j++) {
+      const char = string[i];
+      for (let j = 0; j < runLength; j++) {
         result += char;
       }
     } else {
@@ -264,19 +271,19 @@ function decompressSerialization(string) {
   return result;
 }
 
-var replayMagicNumber = "nmGTi8PB";
+const replayMagicNumber = "nmGTi8PB";
 function stringifyReplay() {
-  var output = replayMagicNumber + "&";
+  let output = replayMagicNumber + "&";
   // only specify the snake id in an input if it's different from the previous.
   // the first snake index is 0 to optimize for the single-snake case.
-  var currentSnakeId = 0;
-  for (var i = 0; i < unmoveStuff.undoStack.length; i++) {
-    var firstChange = unmoveStuff.undoStack[i][0];
+  let currentSnakeId = 0;
+  for (let i = 0; i < unmoveStuff.undoStack.length; i++) {
+    const firstChange = unmoveStuff.undoStack[i][0];
     if (firstChange[0] !== "i") throw unreachable();
-    var snakeId = firstChange[1];
-    var dr = firstChange[2];
-    var dc = firstChange[3];
-    var directionCode;
+    const snakeId = firstChange[1];
+    const dr = firstChange[2];
+    const dc = firstChange[3];
+    let directionCode;
     if      (dr ===-1 && dc === 0) directionCode = "u";
     else if (dr === 0 && dc ===-1) directionCode = "l";
     else if (dr === 1 && dc === 0) directionCode = "d";
@@ -292,15 +299,15 @@ function stringifyReplay() {
 }
 function parseAndLoadReplay(string) {
   string = decompressSerialization(string);
-  var expectedPrefix = replayMagicNumber + "&";
+  const expectedPrefix = replayMagicNumber + "&";
   if (string.substring(0, expectedPrefix.length) !== expectedPrefix) throw new Error("unrecognized replay string");
-  var cursor = expectedPrefix.length;
+  let cursor = expectedPrefix.length;
 
   // the starting snakeid is 0, which may not exist, but we only validate it when doing a move.
   activeSnakeId = 0;
   while (cursor < string.length) {
-    var snakeIdStr = "";
-    var c = string.charAt(cursor);
+    let snakeIdStr = "";
+    let c = string.charAt(cursor);
     cursor += 1;
     while ('0' <= c && c <= '9') {
       snakeIdStr += c;
@@ -333,12 +340,12 @@ function parseAndLoadReplay(string) {
   document.getElementById("removeButton").style.fontWeight = "bold";
 }
 
-var currentSerializedLevel;
+let currentSerializedLevel;
 function saveLevel() {
   if (isDead()) return alert("Can't save while you're dead!");
-  var serializedLevel = compressSerialization(stringifyLevel(level));
+  const serializedLevel = compressSerialization(stringifyLevel(level));
   currentSerializedLevel = serializedLevel;
-  var hash = "#level=" + serializedLevel;
+  const hash = "#level=" + serializedLevel;
   expectHash = hash;
   location.hash = hash;
 
@@ -352,7 +359,7 @@ function saveLevel() {
 function saveReplay() {
   if (dirtyState === EDITOR_DIRTY) return alert("Can't save a replay with unsaved editor changes.");
   // preserve the level in the url bar.
-  var hash = "#level=" + currentSerializedLevel;
+  let hash = "#level=" + currentSerializedLevel;
   if (dirtyState === REPLAY_DIRTY) {
     // there is a replay to save
     hash += "#replay=" + compressSerialization(stringifyReplay());
@@ -368,19 +375,19 @@ function deepEquals(a, b) {
   if (Array.isArray(a)) {
     if (!Array.isArray(b)) return false;
     if (a.length !== b.length) return false;
-    for (var i = 0; i < a.length; i++) {
+    for (let i = 0; i < a.length; i++) {
       if (!deepEquals(a[i], b[i])) return false;
     }
     return true;
   }
   // must be objects
-  var aKeys = Object.keys(a);
-  var bKeys = Object.keys(b);
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
   if (aKeys.length !== bKeys.length) return false;
   aKeys.sort();
   bKeys.sort();
   if (!deepEquals(aKeys, bKeys)) return false;
-  for (var i = 0; i < aKeys.length; i++) {
+  for (let i = 0; i < aKeys.length; i++) {
     if (!deepEquals(a[aKeys[i]], b[bKeys[i]])) return false;
   }
   return true;
@@ -392,8 +399,8 @@ function getLocation(level, r, c) {
 }
 function getRowcol(level, location) {
   if (location < 0 || location >= level.width * level.height) throw unreachable();
-  var r = Math.floor(location / level.width);
-  var c = location % level.width;
+  const r = Math.floor(location / level.width);
+  const c = location % level.width;
   return {r:r, c:c};
 }
 function isInBounds(level, r, c) {
@@ -402,15 +409,15 @@ function isInBounds(level, r, c) {
   return true;
 }
 function offsetLocation(location, dr, dc) {
-  var rowcol = getRowcol(level, location);
+  const rowcol = getRowcol(level, location);
   return getLocation(level, rowcol.r + dr, rowcol.c + dc);
 }
 
-var SHIFT = 1;
-var CTRL = 2;
-var ALT = 4;
+const SHIFT = 1;
+const CTRL = 2;
+const ALT = 4;
 document.addEventListener("keydown", function(event) {
-  var modifierMask = (
+  const modifierMask = (
     (event.shiftKey ? SHIFT : 0) |
     (event.ctrlKey ? CTRL : 0) |
     (event.altKey ? ALT : 0)
@@ -521,14 +528,15 @@ document.addEventListener("keydown", function(event) {
     case "Digit6":
     case "Digit7":
     case "Digit8":
-    case "Digit9":
+    case "Digit9": {
       if (modifierMask !== 0) return;
       if (!isAlive()) return;
-      var index = event.key.slice(-1) - 1;
-      var snakes = getSnakes();
+      const index = event.key.slice(-1) - 1;
+      const snakes = getSnakes();
       snakes.sort(compareId);
       activeSnakeId = snakes[index % snakes.length].id;
       break;
+    }
     default: return;
   }
   event.preventDefault();
@@ -540,10 +548,12 @@ document.getElementById("switchSnakesButton").addEventListener("click", function
   render();
 });
 function switchSnakes(delta) {
+  portalCollisionMap = {};
+  portalsBlocked = false;
   if (!isAlive()) return;
-  var snakes = getSnakes();
+  const snakes = getSnakes();
   snakes.sort(compareId);
-  for (var i = 0; i < snakes.length; i++) {
+  for (let i = 0; i < snakes.length; i++) {
     if (snakes[i].id === activeSnakeId) {
       activeSnakeId = snakes[(i + delta + snakes.length) % snakes.length].id;
       return;
@@ -551,6 +561,9 @@ function switchSnakes(delta) {
   }
   activeSnakeId = snakes[0].id;
 }
+document.getElementById("toggleDarkLight").addEventListener("click", function() {
+  toggleDarkLight();
+});
 document.getElementById("showGridButton").addEventListener("click", function() {
   toggleGrid();
 });
@@ -582,6 +595,15 @@ function toggleShowEditor() {
   savePersistentState();
   showEditorChanged();
 }
+function toggleDarkLight() {
+  if (document.getElementById("toggleDarkLight").textContent === "Light") {
+    document.documentElement.dataset.theme = "light";
+    document.getElementById("toggleDarkLight").textContent = "Dark";
+  } else {
+    document.documentElement.dataset.theme = "dark";
+    document.getElementById("toggleDarkLight").textContent = "Light";
+  }
+}
 function toggleGrid() {
   persistentState.showGrid = !persistentState.showGrid;
   savePersistentState();
@@ -594,9 +616,10 @@ function toggleGrid() {
   });
 });
 document.getElementById("submitSerializationButton").addEventListener("click", function() {
-  var string = document.getElementById("serializationTextarea").value;
+  const string = document.getElementById("serializationTextarea").value;
+  let newLevel;
   try {
-    var newLevel = parseLevel(string);
+    newLevel = parseLevel(string);
   } catch (e) {
     alert(e);
     return;
@@ -609,16 +632,16 @@ document.getElementById("shareLinkTextbox").addEventListener("focus", function()
   }, 0);
 });
 
-var paintBrushTileCode = null;
-var paintBrushSnakeColorIndex = 0;
-var paintBrushBlockId = 0;
-var paintBrushObject = null;
-var selectionStart = null;
-var selectionEnd = null;
-var resizeDragAnchorRowcol = null;
-var clipboardData = null;
-var clipboardOffsetRowcol = null;
-var paintButtonIdAndTileCodes = [
+let paintBrushTileCode = null;
+let paintBrushSnakeColorIndex = 0;
+let paintBrushBlockId = 0;
+let paintBrushObject = null;
+let selectionStart = null;
+let selectionEnd = null;
+let resizeDragAnchorRowcol = null;
+let clipboardData = null;
+let clipboardOffsetRowcol = null;
+const paintButtonIdAndTileCodes = [
   ["resizeUButton", "resizeU"],
   ["resizeDButton", "resizeD"],
   ["selectButton", "select"],
@@ -633,8 +656,8 @@ var paintButtonIdAndTileCodes = [
   ["paintBlockButton", BLOCK],
 ];
 paintButtonIdAndTileCodes.forEach(function(pair) {
-  var id = pair[0];
-  var tileCode = pair[1];
+  const id = pair[0];
+  const tileCode = pair[1];
   document.getElementById(id).addEventListener("click", function() {
     setPaintBrushTileCode(tileCode);
   });
@@ -684,15 +707,15 @@ function refreshCheatButtonText() {
 }
 
 // be careful with location vs rowcol, because this variable is used when resizing
-var lastDraggingRowcol = null;
-var hoverLocation = null;
-var draggingChangeLog = null;
+let lastDraggingRowcol = null;
+let hoverLocation = null;
+let draggingChangeLog = null;
 canvas.addEventListener("pointerdown", function(event) {
   if (!event.isPrimary) return;
   if (event.altKey) return;
   if (event.button !== 0) return;
   event.preventDefault();
-  var location = getLocationFromEvent(event);
+  const location = getLocationFromEvent(event);
   if (persistentState.showEditor && paintBrushTileCode != null) {
     // editor tool
     lastDraggingRowcol = getRowcol(level, location);
@@ -703,7 +726,7 @@ canvas.addEventListener("pointerdown", function(event) {
     paintAtLocation(location, draggingChangeLog);
   } else {
     // playtime
-    var object = findObjectAtLocation(location);
+    const object = findObjectAtLocation(location);
     if (object == null) return;
     if (object.type !== SNAKE) return;
     // active snake
@@ -717,8 +740,8 @@ canvas.addEventListener("pointerdown", function(event) {
   event.preventDefault();
   if (persistentState.showEditor && paintBrushTileCode === "select") {
     // double click with select tool
-    var location = getLocationFromEvent(event);
-    var object = findObjectAtLocation(location);
+    let location = getLocationFromEvent(event);
+    let object = findObjectAtLocation(location);
     if (object == null) return;
     stopDragging();
     if (object.type === SNAKE) {
@@ -760,14 +783,14 @@ function clampRowcol(rowcol) {
 canvas.addEventListener("pointermove", function(event) {
   if (!event.isPrimary) return;
   if (!persistentState.showEditor) return;
-  var location = getLocationFromEvent(event);
-  var mouseRowcol = getRowcol(level, location);
+  const location = getLocationFromEvent(event);
+  const mouseRowcol = getRowcol(level, location);
   if (lastDraggingRowcol != null) {
     clampRowcol(lastDraggingRowcol);
     // Dragging Force - Through the Fruit and Flames
-    var lastDraggingLocation = getLocation(level, lastDraggingRowcol.r, lastDraggingRowcol.c);
+    const lastDraggingLocation = getLocation(level, lastDraggingRowcol.r, lastDraggingRowcol.c);
     // we need to get rowcols for everything before we start dragging, because dragging might resize the world.
-    var path = getNaiveOrthogonalPath(lastDraggingLocation, location).map(function(location) {
+    const path = getNaiveOrthogonalPath(lastDraggingLocation, location).map(function(location) {
       return getRowcol(level, location);
     });
     path.forEach(function(rowcol) {
@@ -793,8 +816,8 @@ canvas.addEventListener("pointerout", function() {
   }
 });
 function getLocationFromEvent(event) {
-  var r = Math.floor(eventToMouseY(event, canvas) / tileSize);
-  var c = Math.floor(eventToMouseX(event, canvas) / tileSize);
+  let r = Math.floor(eventToMouseY(event, canvas) / tileSize);
+  let c = Math.floor(eventToMouseX(event, canvas) / tileSize);
   // since the canvas is centered, the bounding client rect can be half-pixel aligned,
   // resulting in slightly out-of-bounds mouse events.
   r = clamp(r, 0, level.height - 1);
@@ -840,13 +863,13 @@ function setPaintBrushTileCode(tileCode) {
       paintBrushSnakeColorIndex = (paintBrushSnakeColorIndex + 1) % snakeColors.length;
     }
   } else if (tileCode === BLOCK) {
-    var blocks = getBlocks();
+    const blocks = getBlocks();
     if (paintBrushTileCode === BLOCK && blocks.length > 0) {
       // cycle through block ids
       blocks.sort(compareId);
       if (paintBrushBlockId != null) {
         (function() {
-          for (var i = 0; i < blocks.length; i++) {
+          for (let i = 0; i < blocks.length; i++) {
             if (blocks[i].id === paintBrushBlockId) {
               i += 1;
               if (i < blocks.length) {
@@ -882,9 +905,9 @@ function setPaintBrushTileCode(tileCode) {
 }
 function paintBrushTileCodeChanged() {
   paintButtonIdAndTileCodes.forEach(function(pair) {
-    var id = pair[0];
-    var tileCode = pair[1];
-    var backgroundStyle = "";
+    const id = pair[0];
+    const tileCode = pair[1];
+    let backgroundStyle = "";
     if (tileCode === paintBrushTileCode) {
       if (tileCode === SNAKE) {
         // show the color of the active snake in the color of the button
@@ -896,7 +919,7 @@ function paintBrushTileCodeChanged() {
     document.getElementById(id).style.background = backgroundStyle;
   });
 
-  var isSelectionMode = paintBrushTileCode === "select";
+  const isSelectionMode = paintBrushTileCode === "select";
   ["cutButton", "copyButton"].forEach(function (id) {
     document.getElementById(id).disabled = !isSelectionMode;
   });
@@ -911,11 +934,11 @@ function cutSelection() {
   render();
 }
 function copySelection() {
-  var selectedLocations = getSelectedLocations();
+  const selectedLocations = getSelectedLocations();
   if (selectedLocations.length === 0) return;
-  var selectedObjects = [];
+  const selectedObjects = [];
   selectedLocations.forEach(function(location) {
-    var object = findObjectAtLocation(location);
+    const object = findObjectAtLocation(location);
     if (object != null) addIfNotPresent(selectedObjects, object);
   });
   setClipboardData({
@@ -926,27 +949,27 @@ function copySelection() {
 }
 function setClipboardData(data) {
   // find the center
-  var minR = Infinity;
-  var maxR = -Infinity;
-  var minC = Infinity;
-  var maxC = -Infinity;
+  let minR = Infinity;
+  let maxR = -Infinity;
+  let minC = Infinity;
+  let maxC = -Infinity;
   data.selectedLocations.forEach(function(location) {
-    var rowcol = getRowcol(data.level, location);
+    const rowcol = getRowcol(data.level, location);
     if (rowcol.r < minR) minR = rowcol.r;
     if (rowcol.r > maxR) maxR = rowcol.r;
     if (rowcol.c < minC) minC = rowcol.c;
     if (rowcol.c > maxC) maxC = rowcol.c;
   });
-  var offsetR = Math.floor((minR + maxR) / 2);
-  var offsetC = Math.floor((minC + maxC) / 2);
+  const offsetR = Math.floor((minR + maxR) / 2);
+  const offsetC = Math.floor((minC + maxC) / 2);
 
   clipboardData = data;
   clipboardOffsetRowcol = {r:offsetR, c:offsetC};
   paintBrushTileCodeChanged();
 }
 function fillSelection(tileCode) {
-  var changeLog = [];
-  var locations = getSelectedLocations();
+  const changeLog = [];
+  const locations = getSelectedLocations();
   locations.forEach(function(location) {
     if (level.map[location] !== tileCode) {
       changeLog.push(["m", location, level.map[location], tileCode]);
@@ -958,29 +981,29 @@ function fillSelection(tileCode) {
 }
 function getSelectedLocations() {
   if (selectionStart == null || selectionEnd == null) return [];
-  var rowcol1 = getRowcol(level, selectionStart);
-  var rowcol2 = getRowcol(level, selectionEnd);
-  var r1 = rowcol1.r;
-  var c1 = rowcol1.c;
-  var r2 = rowcol2.r;
-  var c2 = rowcol2.c;
+  const rowcol1 = getRowcol(level, selectionStart);
+  const rowcol2 = getRowcol(level, selectionEnd);
+  let r1 = rowcol1.r;
+  let c1 = rowcol1.c;
+  let r2 = rowcol2.r;
+  let c2 = rowcol2.c;
   if (r2 < r1) {
-    var tmp = r1;
+    const tmp = r1;
     r1 = r2;
     r2 = tmp;
   }
   if (c2 < c1) {
-    var tmp = c1;
+    const tmp = c1;
     c1 = c2;
     c2 = tmp;
   }
-  var objects = [];
-  var locations = [];
-  for (var r = r1; r <= r2; r++) {
-    for (var c = c1; c <= c2; c++) {
-      var location = getLocation(level, r, c);
+  const objects = [];
+  const locations = [];
+  for (let r = r1; r <= r2; r++) {
+    for (let c = c1; c <= c2; c++) {
+      const location = getLocation(level, r, c);
       locations.push(location);
-      var object = findObjectAtLocation(location);
+      const object = findObjectAtLocation(location);
       if (object != null) addIfNotPresent(objects, object);
     }
   }
@@ -996,9 +1019,9 @@ function getSelectedLocations() {
 function setHeight(newHeight, changeLog) {
   if (newHeight < level.height) {
     // crop
-    for (var r = newHeight; r < level.height; r++) {
-      for (var c = 0; c < level.width; c++) {
-        var location = getLocation(level, r, c);
+    for (let r = newHeight; r < level.height; r++) {
+      for (let c = 0; c < level.width; c++) {
+        const location = getLocation(level, r, c);
         removeAnyObjectAtLocation(location, changeLog);
         // also delete non-space tiles
         paintTileAtLocation(location, SPACE, changeLog);
@@ -1007,8 +1030,8 @@ function setHeight(newHeight, changeLog) {
     level.map.splice(newHeight * level.width);
   } else {
     // expand
-    for (var r = level.height; r < newHeight; r++) {
-      for (var c = 0; c < level.width; c++) {
+    for (let r = level.height; r < newHeight; r++) {
+      for (let c = 0; c < level.width; c++) {
         level.map.push(SPACE);
       }
     }
@@ -1019,9 +1042,9 @@ function setHeight(newHeight, changeLog) {
 function setTop(newHeight, changeLog) {
   if (newHeight < level.height) {
     // crop
-    for (var r = 0; r < level.height - newHeight; r++) {
-      for (var c = 0; c < level.width; c++) {
-        var location = getLocation(level, r, c);
+    for (let r = 0; r < level.height - newHeight; r++) {
+      for (let c = 0; c < level.width; c++) {
+        const location = getLocation(level, r, c);
         removeAnyObjectAtLocation(location, changeLog);
         // also delete non-space tiles
         paintTileAtLocation(location, SPACE, changeLog);
@@ -1030,14 +1053,14 @@ function setTop(newHeight, changeLog) {
     level.map.splice(0, (level.height - newHeight) * level.width);
   } else {
     // expand
-    for (var r = level.height; r < newHeight; r++) {
-      for (var c = 0; c < level.width; c++) {
+    for (let r = level.height; r < newHeight; r++) {
+      for (let c = 0; c < level.width; c++) {
         // inefficient
         level.map.splice(0, 0, SPACE);
       }
     }
   }
-  var transformLocation = function(location) {return location + (newHeight - level.height) * level.width};
+  const transformLocation = function(location) {return location + (newHeight - level.height) * level.width};
   level.objects.forEach(function(object) {
     object.locations = object.locations.map(transformLocation);
   });
@@ -1047,9 +1070,9 @@ function setTop(newHeight, changeLog) {
 function setWidth(newWidth, changeLog) {
   if (newWidth < level.width) {
     // crop
-    for (var r = level.height - 1; r >= 0; r--) {
-      for (var c = level.width - 1; c >= newWidth; c--) {
-        var location = getLocation(level, r, c);
+    for (let r = level.height - 1; r >= 0; r--) {
+      for (let c = level.width - 1; c >= newWidth; c--) {
+        const location = getLocation(level, r, c);
         removeAnyObjectAtLocation(location, changeLog);
         paintTileAtLocation(location, SPACE, changeLog);
         level.map.splice(location, 1);
@@ -1057,15 +1080,15 @@ function setWidth(newWidth, changeLog) {
     }
   } else {
     // expand
-    for (var r = level.height - 1; r >= 0; r--) {
-      var insertionPoint = level.width * (r + 1);
-      for (var c = level.width; c < newWidth; c++) {
+    for (let r = level.height - 1; r >= 0; r--) {
+      const insertionPoint = level.width * (r + 1);
+      for (let c = level.width; c < newWidth; c++) {
         // boy is this inefficient. ... YOLO!
         level.map.splice(insertionPoint, 0, SPACE);
       }
     }
   }
-  var transformLocation = makeScaleCoordinatesFunction(level.width, newWidth, 0);
+  const transformLocation = makeScaleCoordinatesFunction(level.width, newWidth, 0);
   level.objects.forEach(function(object) {
     object.locations = object.locations.map(transformLocation);
   });
@@ -1075,9 +1098,9 @@ function setWidth(newWidth, changeLog) {
 function setLeft(newWidth, changeLog) {
   if (newWidth < level.width) {
     // crop
-    for (var r = level.height - 1; r >= 0; r--) {
-      for (var c = level.width - 1 - newWidth; c >= 0; c--) {
-        var location = getLocation(level, r, c);
+    for (let r = level.height - 1; r >= 0; r--) {
+      for (let c = level.width - 1 - newWidth; c >= 0; c--) {
+        const location = getLocation(level, r, c);
         removeAnyObjectAtLocation(location, changeLog);
         paintTileAtLocation(location, SPACE, changeLog);
         level.map.splice(location, 1);
@@ -1085,16 +1108,16 @@ function setLeft(newWidth, changeLog) {
     }
   } else {
     // expand
-    for (var r = level.height - 1; r >= 0; r--) {
-      var insertionPoint = level.width * r;
-      for (var c = level.width; c < newWidth; c++) {
+    for (let r = level.height - 1; r >= 0; r--) {
+      const insertionPoint = level.width * r;
+      for (let c = level.width; c < newWidth; c++) {
         // boy is this inefficient. ... YOLO!
         level.map.splice(insertionPoint, 0, SPACE);
       }
     }
   }
-  var offset = newWidth - level.width;
-  var transformLocation = makeScaleCoordinatesFunction(level.width, newWidth, offset);
+  const offset = newWidth - level.width;
+  const transformLocation = makeScaleCoordinatesFunction(level.width, newWidth, offset);
   level.objects.forEach(function(object) {
     object.locations = object.locations.map(transformLocation);
   });
@@ -1103,9 +1126,10 @@ function setLeft(newWidth, changeLog) {
 }
 
 function newSnake(color, location) {
-  var snakes = findSnakesOfColor(color);
+  const snakes = findSnakesOfColor(color);
   snakes.sort(compareId);
-  for (var i = 0; i < snakes.length; i++) {
+  let i = 0;
+  for (; i < snakes.length; i++) {
     if (snakes[i].id !== i * snakeColors.length + color) break;
   }
   return {
@@ -1116,9 +1140,10 @@ function newSnake(color, location) {
   };
 }
 function newBlock(location) {
-  var blocks = getBlocks();
+  const blocks = getBlocks();
   blocks.sort(compareId);
-  for (var i = 0; i < blocks.length; i++) {
+  let i = 0;
+  for (; i < blocks.length; i++) {
     if (blocks[i].id !== i) break;
   }
   return {
@@ -1129,9 +1154,10 @@ function newBlock(location) {
   };
 }
 function newFruit(location) {
-  var fruits = getObjectsOfType(FRUIT);
+  const fruits = getObjectsOfType(FRUIT);
   fruits.sort(compareId);
-  for (var i = 0; i < fruits.length; i++) {
+  let i = 0;
+  for (; i < fruits.length; i++) {
     if (fruits[i].id !== i) break;
   }
   return {
@@ -1148,13 +1174,13 @@ function paintAtLocation(location, changeLog) {
     removeAnyObjectAtLocation(location, changeLog);
     paintTileAtLocation(location, paintBrushTileCode, changeLog);
   } else if (paintBrushTileCode === "resizeU") {
-    var toRowcol = getRowcol(level, location);
+    const toRowcol = getRowcol(level, location);
     if (resizeDragAnchorRowcol == null) {
       resizeDragAnchorRowcol = toRowcol;
       return;
     }
-    var dr = toRowcol.r - resizeDragAnchorRowcol.r;
-    var dc = toRowcol.c - resizeDragAnchorRowcol.c;
+    const dr = toRowcol.r - resizeDragAnchorRowcol.r;
+    const dc = toRowcol.c - resizeDragAnchorRowcol.c;
     if (dr === 0 && dc === 0) return;
     if (dr < 0) setTop(level.height - dr, changeLog);
     if (dc < 0) setLeft(level.width - dc, changeLog);
@@ -1162,13 +1188,13 @@ function paintAtLocation(location, changeLog) {
     if (dc > 0) setWidth(level.width + dc, changeLog);
     resizeDragAnchorRowcol = null;
   } else if (paintBrushTileCode === "resizeD") {
-    var toRowcol = getRowcol(level, location);
+    const toRowcol = getRowcol(level, location);
     if (resizeDragAnchorRowcol == null) {
       resizeDragAnchorRowcol = toRowcol;
       return;
     }
-    var dr = toRowcol.r - resizeDragAnchorRowcol.r;
-    var dc = toRowcol.c - resizeDragAnchorRowcol.c;
+    const dr = toRowcol.r - resizeDragAnchorRowcol.r;
+    const dc = toRowcol.c - resizeDragAnchorRowcol.c;
     if (dr === 0 && dc === 0) return;
     if (dr > 0) setTop(Math.max(level.height - dr, 2), changeLog);
     if (dc > 0) setLeft(Math.max(level.width - dc, 2), changeLog);
@@ -1178,10 +1204,10 @@ function paintAtLocation(location, changeLog) {
   } else if (paintBrushTileCode === "select") {
     selectionEnd = location;
   } else if (paintBrushTileCode === "paste") {
-    var hoverRowcol = getRowcol(level, location);
-    var pastedData = previewPaste(hoverRowcol.r, hoverRowcol.c);
+    const hoverRowcol = getRowcol(level, location);
+    const pastedData = previewPaste(hoverRowcol.r, hoverRowcol.c);
     pastedData.selectedLocations.forEach(function(location) {
-      var tileCode = pastedData.level.map[location];
+      const tileCode = pastedData.level.map[location];
       removeAnyObjectAtLocation(location, changeLog);
       paintTileAtLocation(location, tileCode, changeLog);
     });
@@ -1198,12 +1224,12 @@ function paintAtLocation(location, changeLog) {
       changeLog.push([object.type, object.id, [0,[]], serializeObjectState(object)]);
     });
   } else if (paintBrushTileCode === SNAKE) {
-    var oldSnakeSerialization = serializeObjectState(paintBrushObject);
+    const oldSnakeSerialization = serializeObjectState(paintBrushObject);
     if (paintBrushObject != null) {
       // keep dragging
       if (paintBrushObject.locations[0] === location) return; // we just did that
       // watch out for self-intersection
-      var selfIntersectionIndex = paintBrushObject.locations.indexOf(location);
+      const selfIntersectionIndex = paintBrushObject.locations.indexOf(location);
       if (selfIntersectionIndex !== -1) {
         // truncate from here back
         paintBrushObject.locations.splice(selfIntersectionIndex);
@@ -1214,7 +1240,7 @@ function paintAtLocation(location, changeLog) {
     paintTileAtLocation(location, SPACE, changeLog);
     removeAnyObjectAtLocation(location, changeLog);
     if (paintBrushObject == null) {
-      var thereWereNoSnakes = countSnakes() === 0;
+      const thereWereNoSnakes = countSnakes() === 0;
       paintBrushObject = newSnake(paintBrushSnakeColorIndex, location);
       level.objects.push(paintBrushObject);
       if (thereWereNoSnakes) activateAnySnakePlease();
@@ -1224,7 +1250,7 @@ function paintAtLocation(location, changeLog) {
     }
     changeLog.push([paintBrushObject.type, paintBrushObject.id, oldSnakeSerialization, serializeObjectState(paintBrushObject)]);
   } else if (paintBrushTileCode === BLOCK) {
-    var objectHere = findObjectAtLocation(location);
+    const objectHere = findObjectAtLocation(location);
     if (paintBrushBlockId == null && objectHere != null && objectHere.type === BLOCK) {
       // just start editing this block
       paintBrushBlockId = objectHere.id;
@@ -1232,11 +1258,11 @@ function paintAtLocation(location, changeLog) {
       // make a change
       // make sure there's space behind us
       paintTileAtLocation(location, SPACE, changeLog);
-      var thisBlock = null;
+      let thisBlock = null;
       if (paintBrushBlockId != null) {
         thisBlock = findBlockById(paintBrushBlockId);
       }
-      var oldBlockSerialization = serializeObjectState(thisBlock);
+      const oldBlockSerialization = serializeObjectState(thisBlock);
       if (thisBlock == null) {
         // create new block
         removeAnyObjectAtLocation(location, changeLog);
@@ -1244,7 +1270,7 @@ function paintAtLocation(location, changeLog) {
         level.objects.push(thisBlock);
         paintBrushBlockId = thisBlock.id;
       } else {
-        var existingIndex = thisBlock.locations.indexOf(location);
+        const existingIndex = thisBlock.locations.indexOf(location);
         if (existingIndex !== -1) {
           // reclicking part of this object means to delete just part of it.
           if (thisBlock.locations.length === 1) {
@@ -1266,7 +1292,7 @@ function paintAtLocation(location, changeLog) {
   } else if (paintBrushTileCode === FRUIT) {
     paintTileAtLocation(location, SPACE, changeLog);
     removeAnyObjectAtLocation(location, changeLog);
-    var object = newFruit(location)
+    const object = newFruit(location)
     level.objects.push(object);
     changeLog.push([object.type, object.id, serializeObjectState(null), serializeObjectState(object)]);
   } else throw unreachable();
@@ -1311,13 +1337,13 @@ function pushUndo(undoStuff, changeLog) {
   undoStuffChanged(undoStuff);
 }
 function reduceChangeLog(changeLog) {
-  for (var i = 0; i < changeLog.length - 1; i++) {
-    var change = changeLog[i];
+  for (let i = 0; i < changeLog.length - 1; i++) {
+    const change = changeLog[i];
     if (change[0] === "i") {
       continue; // don't reduce player input
     } else if (change[0] === "t") {
-      for (var j = i + 1; j < changeLog.length; j++) {
-        var otherChange = changeLog[j];
+      for (let j = i + 1; j < changeLog.length; j++) {
+        const otherChange = changeLog[j];
         if (otherChange[0] === "t") {
           // combine
           change[2] = otherChange[2];
@@ -1334,8 +1360,8 @@ function reduceChangeLog(changeLog) {
         i--;
       }
     } else if (change[0] === "l") {
-      for (var j = i + 1; j < changeLog.length; j++) {
-        var otherChange = changeLog[j];
+      for (let j = i + 1; j < changeLog.length; j++) {
+        const otherChange = changeLog[j];
         if (otherChange[0] === "l") {
           // combine
           change[2] = otherChange[2];
@@ -1352,8 +1378,8 @@ function reduceChangeLog(changeLog) {
         i--;
       }
     } else if (change[0] === "h") {
-      for (var j = i + 1; j < changeLog.length; j++) {
-        var otherChange = changeLog[j];
+      for (let j = i + 1; j < changeLog.length; j++) {
+        const otherChange = changeLog[j];
         if (otherChange[0] === "h") {
           // combine
           change[2] = otherChange[2];
@@ -1370,8 +1396,8 @@ function reduceChangeLog(changeLog) {
         i--;
       }
     } else if (change[0] === "w") {
-      for (var j = i + 1; j < changeLog.length; j++) {
-        var otherChange = changeLog[j];
+      for (let j = i + 1; j < changeLog.length; j++) {
+        const otherChange = changeLog[j];
         if (otherChange[0] === "w") {
           // combine
           change[2] = otherChange[2];
@@ -1388,8 +1414,8 @@ function reduceChangeLog(changeLog) {
         i--;
       }
     } else if (change[0] === "m") {
-      for (var j = i + 1; j < changeLog.length; j++) {
-        var otherChange = changeLog[j];
+      for (let j = i + 1; j < changeLog.length; j++) {
+        const otherChange = changeLog[j];
         if (otherChange[0] === "m" && otherChange[1] === change[1]) {
           // combine
           change[3] = otherChange[3];
@@ -1405,8 +1431,8 @@ function reduceChangeLog(changeLog) {
         i--;
       }
     } else if (change[0] === SNAKE || change[0] === BLOCK || change[0] === FRUIT) {
-      for (var j = i + 1; j < changeLog.length; j++) {
-        var otherChange = changeLog[j];
+      for (let j = i + 1; j < changeLog.length; j++) {
+        const otherChange = changeLog[j];
         if (otherChange[0] === change[0] && otherChange[1] === change[1]) {
           // combine
           change[3] = otherChange[3];
@@ -1429,6 +1455,8 @@ function undo(undoStuff) {
   animationQueue = [];
   animationQueueCursor = 0;
   paradoxes = [];
+  portalCollisionMap = {};
+  portalsBlocked = false;
   undoOneFrame(undoStuff);
   undoStuffChanged(undoStuff);
 }
@@ -1436,14 +1464,16 @@ function reset(undoStuff) {
   animationQueue = [];
   animationQueueCursor = 0;
   paradoxes = [];
+  portalCollisionMap = {};
+  portalsBlocked = false;
   while (undoStuff.undoStack.length > 0) {
     undoOneFrame(undoStuff);
   }
   undoStuffChanged(undoStuff);
 }
 function undoOneFrame(undoStuff) {
-  var doThis = undoStuff.undoStack.pop();
-  var redoChangeLog = [];
+  const doThis = undoStuff.undoStack.pop();
+  const redoChangeLog = [];
   undoChanges(doThis, redoChangeLog);
   if (redoChangeLog.length > 0) {
     redoChangeLog.push(level.width);
@@ -1469,14 +1499,16 @@ function unreset(undoStuff) {
   }
   undoStuffChanged(undoStuff);
 
-  // don't animate the last frame
-  animationQueue = [];
-  animationQueueCursor = 0;
-  freshlyRemovedAnimatedObjects = [];
+  // don't animate the last frame unless dying
+  if (!isDead()) {
+    animationQueue = [];
+    animationQueueCursor = 0;
+    freshlyRemovedAnimatedObjects = [];
+  }
 }
 function redoOneFrame(undoStuff) {
-  var doThis = undoStuff.redoStack.pop();
-  var undoChangeLog = [];
+  const doThis = undoStuff.redoStack.pop();
+  const undoChangeLog = [];
   undoChanges(doThis, undoChangeLog);
   if (undoChangeLog.length > 0) {
     undoChangeLog.push(level.width);
@@ -1486,20 +1518,20 @@ function redoOneFrame(undoStuff) {
   if (undoStuff === uneditStuff) editorHasBeenTouched = true;
 }
 function undoChanges(changes, changeLog) {
-  var widthContext = changes.pop();
-  var transformLocation = widthContext === level.width ? identityFunction : makeScaleCoordinatesFunction(widthContext, level.width, 0);
-  for (var i = changes.length - 1; i >= 0; i--) {
-    var paradoxDescription = undoChange(changes[i]);
+  const widthContext = changes.pop();
+  const transformLocation = widthContext === level.width ? identityFunction : makeScaleCoordinatesFunction(widthContext, level.width, 0);
+  for (let i = changes.length - 1; i >= 0; i--) {
+    const paradoxDescription = undoChange(changes[i]);
     if (paradoxDescription != null) paradoxes.push(paradoxDescription);
   }
 
-  var lastChange = changes[changes.length - 1];
+  const lastChange = changes[changes.length - 1];
   if (lastChange[0] === "i") {
     // replay animation
     animationQueue = lastChange[4];
     animationQueueCursor = 0;
     freshlyRemovedAnimatedObjects = lastChange[5];
-    animationStart = new Date().getTime();
+    animationStart = performance.now();
   }
 
   function undoChange(change) {
@@ -1510,48 +1542,48 @@ function undoChanges(changes, changeLog) {
       return null;
     } else if (change[0] === "t") {
       // change height from top
-      var fromHeight = change[1];
-      var   toHeight = change[2];
+      const fromHeight = change[1];
+      const   toHeight = change[2];
       if (level.height !== toHeight) return "Impossible";
       setTop(fromHeight, changeLog);
     } else if (change[0] === "l") {
       // change width from left
-      var fromWidth = change[1];
-      var   toWidth = change[2];
+      const fromWidth = change[1];
+      const   toWidth = change[2];
       if (level.width !== toWidth) return "Impossible";
       setLeft(fromWidth, changeLog);
     } else if (change[0] === "h") {
       // change height
-      var fromHeight = change[1];
-      var   toHeight = change[2];
+      const fromHeight = change[1];
+      const   toHeight = change[2];
       if (level.height !== toHeight) return "Impossible";
       setHeight(fromHeight, changeLog);
     } else if (change[0] === "w") {
       // change width
-      var fromWidth = change[1];
-      var   toWidth = change[2];
+      const fromWidth = change[1];
+      const   toWidth = change[2];
       if (level.width !== toWidth) return "Impossible";
       setWidth(fromWidth, changeLog);
     } else if (change[0] === "m") {
       // change map tile
-      var location = transformLocation(change[1]);
-      var fromTileCode = change[2];
-      var   toTileCode = change[3];
+      const location = transformLocation(change[1]);
+      const fromTileCode = change[2];
+      const   toTileCode = change[3];
       if (location >= level.map.length) return "Can't turn " + describe(toTileCode) + " into " + describe(fromTileCode) + " out of bounds";
       if (level.map[location] !== toTileCode) return "Can't turn " + describe(toTileCode) + " into " + describe(fromTileCode) + " because there's " + describe(level.map[location]) + " there now";
       paintTileAtLocation(location, fromTileCode, changeLog);
     } else if (change[0] === SNAKE || change[0] === BLOCK || change[0] === FRUIT) {
       // change object
-      var type = change[0];
-      var id = change[1];
-      var fromDead = change[2][0];
-      var   toDead = change[3][0];
-      var fromLocations = change[2][1].map(transformLocation);
-      var   toLocations = change[3][1].map(transformLocation);
+      const type = change[0];
+      const id = change[1];
+      const fromDead = change[2][0];
+      const   toDead = change[3][0];
+      const fromLocations = change[2][1].map(transformLocation);
+      const   toLocations = change[3][1].map(transformLocation);
       if (fromLocations.filter(function(location) { return location >= level.map.length; }).length > 0) {
         return "Can't move " + describe(type, id) + " out of bounds";
       }
-      var object = findObjectOfTypeAndId(type, id);
+      let object = findObjectOfTypeAndId(type, id);
       if (toLocations.length !== 0) {
         // should exist at this location
         if (object == null) return "Can't move " + describe(type, id) + " because it doesn't exit";
@@ -1559,7 +1591,7 @@ function undoChanges(changes, changeLog) {
         if (object.dead !== toDead) return "Can't move " + describe(object) + " because it's alive/dead state doesn't match";
         // doit
         if (fromLocations.length !== 0) {
-          var oldState = serializeObjectState(object);
+          const oldState = serializeObjectState(object);
           object.locations = fromLocations;
           object.dead = fromDead;
           changeLog.push([object.type, object.id, oldState, serializeObjectState(object)]);
@@ -1612,7 +1644,7 @@ function describe(arg1, arg2) {
 }
 
 function undoStuffChanged(undoStuff) {
-  var movesText = undoStuff.undoStack.length + "+" + undoStuff.redoStack.length;
+  const movesText = undoStuff.undoStack.length + "+" + undoStuff.redoStack.length;
   document.getElementById(undoStuff.spanId).textContent = movesText;
   document.getElementById(undoStuff.undoButtonId).disabled = undoStuff.undoStack.length === 0;
   document.getElementById(undoStuff.redoButtonId).disabled = undoStuff.redoStack.length === 0;
@@ -1625,10 +1657,10 @@ function undoStuffChanged(undoStuff) {
   }
 
   // render paradox display
-  var uniqueParadoxes = [];
-  var paradoxCounts = [];
+  const uniqueParadoxes = [];
+  const paradoxCounts = [];
   paradoxes.forEach(function(paradoxDescription) {
-    var index = uniqueParadoxes.indexOf(paradoxDescription);
+    const index = uniqueParadoxes.indexOf(paradoxDescription);
     if (index !== -1) {
       paradoxCounts[index] += 1;
     } else {
@@ -1636,7 +1668,7 @@ function undoStuffChanged(undoStuff) {
       paradoxCounts.push(1);
     }
   });
-  var paradoxDivContent = "";
+  let paradoxDivContent = "";
   uniqueParadoxes.forEach(function(paradox, i) {
     if (i > 0) paradoxDivContent += "<br>\n";
     if (paradoxCounts[i] > 1) paradoxDivContent += "(" + paradoxCounts[i] + "x) ";
@@ -1651,12 +1683,12 @@ function undoStuffChanged(undoStuff) {
   }
 }
 
-var CLEAN_NO_TIMELINES = 0;
-var CLEAN_WITH_REDO = 1;
-var REPLAY_DIRTY = 2;
-var EDITOR_DIRTY = 3;
-var dirtyState = CLEAN_NO_TIMELINES;
-var editorHasBeenTouched = false;
+const CLEAN_NO_TIMELINES = 0;
+const CLEAN_WITH_REDO = 1;
+const REPLAY_DIRTY = 2;
+const EDITOR_DIRTY = 3;
+let dirtyState = CLEAN_NO_TIMELINES;
+let editorHasBeenTouched = false;
 function updateDirtyState() {
   if (haveCheatcodesBeenUsed() || editorHasBeenTouched) {
     dirtyState = EDITOR_DIRTY;
@@ -1668,7 +1700,6 @@ function updateDirtyState() {
     dirtyState = CLEAN_NO_TIMELINES;
   }
 
-  var saveLevelButton = document.getElementById("saveLevelButton");
   // the save button clears your timelines
   saveLevelButton.disabled = dirtyState === CLEAN_NO_TIMELINES;
   if (dirtyState >= EDITOR_DIRTY) {
@@ -1680,7 +1711,6 @@ function updateDirtyState() {
     saveLevelButton.textContent = "Save Level";
   }
 
-  var saveProgressButton = document.getElementById("saveProgressButton");
   // you can't save a replay if your level is dirty
   if (dirtyState === CLEAN_WITH_REDO) {
     saveProgressButton.textContent = "Forget Progress";
@@ -1696,7 +1726,7 @@ function haveCheatcodesBeenUsed() {
   });
 }
 
-var persistentState = {
+let persistentState = {
   showEditor: false,
   showGrid: true,
 };
@@ -1706,17 +1736,18 @@ function savePersistentState() {
 function loadPersistentState() {
   try {
     persistentState = JSON.parse(localStorage.snakefall);
-  } catch (e) {
+  } catch {
+    // ignore error
   }
   persistentState.showEditor = !!persistentState.showEditor;
   persistentState.showGrid = !!persistentState.showGrid;
   showEditorChanged();
 }
-var isGravityEnabled = true;
+let isGravityEnabled = true;
 function isGravity() {
   return isGravityEnabled || !persistentState.showEditor;
 }
-var isCollisionEnabled = true;
+let isCollisionEnabled = true;
 function isCollision() {
   return isCollisionEnabled || !persistentState.showEditor;
 }
@@ -1738,17 +1769,19 @@ function showEditorChanged() {
 }
 
 function move(dr, dc) {
+  portalCollisionMap = {};
+  portalsBlocked = false;
   if (!isAlive()) return;
   animationQueue = [];
   animationQueueCursor = 0;
   freshlyRemovedAnimatedObjects = [];
-  animationStart = new Date().getTime();
-  var activeSnake = findActiveSnake();
-  var headRowcol = getRowcol(level, activeSnake.locations[0]);
-  var newRowcol = {r:headRowcol.r + dr, c:headRowcol.c + dc};
+  animationStart = performance.now();
+  const activeSnake = findActiveSnake();
+  const headRowcol = getRowcol(level, activeSnake.locations[0]);
+  const newRowcol = {r:headRowcol.r + dr, c:headRowcol.c + dc};
   if (!isInBounds(level, newRowcol.r, newRowcol.c)) return;
-  var newLocation = getLocation(level, newRowcol.r, newRowcol.c);
-  var changeLog = [];
+  const newLocation = getLocation(level, newRowcol.r, newRowcol.c);
+  const changeLog = [];
 
   // The changeLog for a player movement starts with the input
   // when playing normally.
@@ -1756,13 +1789,13 @@ function move(dr, dc) {
     changeLog.push(["i", activeSnake.id, dr, dc, animationQueue, freshlyRemovedAnimatedObjects]);
   }
 
-  var ate = 0;
-  var pushedObjects = [];
+  let ate = 0;
+  const pushedObjects = [];
 
   if (isCollision()) {
-    var newTile = level.map[newLocation];
+    const newTile = level.map[newLocation];
     if (!isTileCodeAir(newTile)) return; // can't go through that tile
-    var otherObject = findObjectAtLocation(newLocation);
+    const otherObject = findObjectAtLocation(newLocation);
     if (otherObject != null) {
       if (otherObject === activeSnake) return; // can't push yourself
       if (otherObject.type === FRUIT) {
@@ -1777,9 +1810,9 @@ function move(dr, dc) {
   }
 
   // slither forward
-  var activeSnakeOldState = serializeObjectState(activeSnake);
-  var size1 = activeSnake.locations.length + ate === 1;
-  var slitherAnimations = [
+  const activeSnakeOldState = serializeObjectState(activeSnake);
+  const size1 = activeSnake.locations.length + ate === 1;
+  const slitherAnimations = [
     70,
     [
       // size-1 snakes really do more of a move than a slither
@@ -1792,8 +1825,8 @@ function move(dr, dc) {
   activeSnake.locations.unshift(newLocation);
   if (ate === 0) {
     // drag your tail forward
-    var oldRowcol = getRowcol(level, activeSnake.locations[activeSnake.locations.length - 1]);
-    var newRowcol = getRowcol(level, activeSnake.locations[activeSnake.locations.length - 2]);
+    const oldRowcol = getRowcol(level, activeSnake.locations[activeSnake.locations.length - 1]);
+    const newRowcol = getRowcol(level, activeSnake.locations[activeSnake.locations.length - 2]);
     if (!size1) {
       slitherAnimations.push([
         SLITHER_TAIL,
@@ -1807,8 +1840,8 @@ function move(dr, dc) {
   changeLog.push([activeSnake.type, activeSnake.id, activeSnakeOldState, serializeObjectState(activeSnake)]);
 
   // did you just push your face into a portal?
-  var portalLocations = getActivePortalLocations();
-  var portalActivationLocations = [];
+  const portalLocations = getActivePortalLocations();
+  let portalActivationLocations = [];
   if (portalLocations.indexOf(newLocation) !== -1) {
     portalActivationLocations.push(newLocation);
   }
@@ -1817,11 +1850,11 @@ function move(dr, dc) {
   animationQueue.push(slitherAnimations);
 
   // gravity loop
-  var stateToAnimationIndex = {};
-  if (isGravity()) for (var fallHeight = 1;; fallHeight++) {
-    var serializedState = serializeObjects(level.objects);
-    var infiniteLoopStartIndex = stateToAnimationIndex[serializedState];
-    if (infiniteLoopStartIndex != null) {
+  const stateToAnimationIndex = {};
+  if (isGravity()) for (let fallHeight = 1;; fallHeight++) {
+    const serializedState = serializeObjects(level.objects);
+    const infiniteLoopStartIndex = stateToAnimationIndex[serializedState];
+    if (infiniteLoopStartIndex > 1) {
       // infinite loop
       animationQueue.push([0, [INFINITE_LOOP, animationQueue.length - infiniteLoopStartIndex]]);
       break;
@@ -1830,24 +1863,28 @@ function move(dr, dc) {
     }
     // do portals separate from falling logic
     if (portalActivationLocations.length === 1) {
-      var portalAnimations = [500];
+      const portalAnimations = [500];
       if (activatePortal(portalLocations, portalActivationLocations[0], portalAnimations, changeLog)) {
         animationQueue.push(portalAnimations);
       }
       portalActivationLocations = [];
     }
+    if (portalActivationLocations.length === 2) {
+      portalsBlocked = true;
+      portalActivationLocations = [];
+    }
     // now do falling logic
-    var didAnything = false;
-    var fallingAnimations = [
+    let didAnything = false;
+    const fallingAnimations = [
       70 / Math.sqrt(fallHeight),
     ];
-    var exitAnimationQueue = [];
+    const exitAnimationQueue = [];
 
     // check for exit
     if (!isUneatenFruit()) {
-      var snakes = getSnakes();
-      for (var i = 0; i < snakes.length; i++) {
-        var snake = snakes[i];
+      const snakes = getSnakes();
+      for (let i = 0; i < snakes.length; i++) {
+        const snake = snakes[i];
         if (level.map[snake.locations[0]] === EXIT) {
           // (one of) you made it!
           removeAnimatedObject(snake, changeLog);
@@ -1861,10 +1898,10 @@ function move(dr, dc) {
     }
 
     // fall
-    var dyingObjects = [];
-    var fallingObjects = level.objects.filter(function(object) {
+    const dyingObjects = [];
+    const fallingObjects = level.objects.filter(function(object) {
       if (object.type === FRUIT) return; // can't fall
-      var theseDyingObjects = [];
+      const theseDyingObjects = [];
       if (!checkMovement(null, object, 1, 0, [], theseDyingObjects)) return false;
       // this object can fall. maybe more will fall with it too. we'll check those separately.
       theseDyingObjects.forEach(function(object) {
@@ -1873,11 +1910,11 @@ function move(dr, dc) {
       return true;
     });
     if (dyingObjects.length > 0) {
-      var anySnakesDied = false;
+      let anySnakesDied = false;
       dyingObjects.forEach(function(object) {
         if (object.type === SNAKE) {
           // look what you've done
-          var oldState = serializeObjectState(object);
+          const oldState = serializeObjectState(object);
           object.dead = true;
           changeLog.push([object.type, object.id, oldState, serializeObjectState(object)]);
           anySnakesDied = true;
@@ -1915,12 +1952,12 @@ function checkMovement(pusher, pushedObject, dr, dc, pushedObjects, dyingObjects
   // pusher can be null (for gravity)
   pushedObjects.push(pushedObject);
   // find forward locations
-  var forwardLocations = [];
-  for (var i = 0; i < pushedObjects.length; i++) {
+  const forwardLocations = [];
+  for (let i = 0; i < pushedObjects.length; i++) {
     pushedObject = pushedObjects[i];
-    for (var j = 0; j < pushedObject.locations.length; j++) {
-      var rowcol = getRowcol(level, pushedObject.locations[j]);
-      var forwardRowcol = {r:rowcol.r + dr, c:rowcol.c + dc};
+    for (let j = 0; j < pushedObject.locations.length; j++) {
+      const rowcol = getRowcol(level, pushedObject.locations[j]);
+      const forwardRowcol = {r:rowcol.r + dr, c:rowcol.c + dc};
       if (!isInBounds(level, forwardRowcol.r, forwardRowcol.c)) {
         if (dyingObjects == null) {
           // can't push things out of bounds
@@ -1932,8 +1969,8 @@ function checkMovement(pusher, pushedObject, dr, dc, pushedObjects, dyingObjects
           continue;
         }
       }
-      var forwardLocation = getLocation(level, forwardRowcol.r, forwardRowcol.c);
-      var yetAnotherObject = findObjectAtLocation(forwardLocation);
+      const forwardLocation = getLocation(level, forwardRowcol.r, forwardRowcol.c);
+      const yetAnotherObject = findObjectAtLocation(forwardLocation);
       if (yetAnotherObject != null) {
         if (yetAnotherObject.type === FRUIT) {
           // not pushable
@@ -1955,17 +1992,17 @@ function checkMovement(pusher, pushedObject, dr, dc, pushedObjects, dyingObjects
     }
   }
   // check forward locations
-  for (var i = 0; i < forwardLocations.length; i++) {
-    var forwardLocation = forwardLocations[i];
+  for (let i = 0; i < forwardLocations.length; i++) {
+    const forwardLocation = forwardLocations[i];
     // many of these locations can be inside objects,
     // but that means the tile must be air,
     // and we already know pushing that object.
-    var tileCode = level.map[forwardLocation];
+    const tileCode = level.map[forwardLocation];
     if (!isTileCodeAir(tileCode)) {
       if (dyingObjects != null) {
         if (tileCode === SPIKE) {
           // uh... which object was this again?
-          var deadObject = findObjectAtLocation(offsetLocation(forwardLocation, -dr, -dc));
+          const deadObject = findObjectAtLocation(offsetLocation(forwardLocation, -dr, -dc));
           if (deadObject.type === SNAKE) {
             // ouch!
             addIfNotPresent(dyingObjects, deadObject);
@@ -1982,16 +2019,16 @@ function checkMovement(pusher, pushedObject, dr, dc, pushedObjects, dyingObjects
 }
 
 function activateAnySnakePlease() {
-  var snakes = getSnakes();
+  const snakes = getSnakes();
   if (snakes.length === 0) return; // nope.avi
   activeSnakeId = snakes[0].id;
 }
 
 function moveObjects(objects, dr, dc, portalLocations, portalActivationLocations, changeLog, animations) {
   objects.forEach(function(object) {
-    var oldState = serializeObjectState(object);
-    var oldPortals = getSetIntersection(portalLocations, object.locations);
-    for (var i = 0; i < object.locations.length; i++) {
+    const oldState = serializeObjectState(object);
+    const oldPortals = getSetIntersection(portalLocations, object.locations);
+    for (let i = 0; i < object.locations.length; i++) {
       object.locations[i] = offsetLocation(object.locations[i], dr, dc);
     }
     changeLog.push([object.type, object.id, oldState, serializeObjectState(object)]);
@@ -2002,42 +2039,73 @@ function moveObjects(objects, dr, dc, portalLocations, portalActivationLocations
       dc,
     ]);
 
-    var newPortals = getSetIntersection(portalLocations, object.locations);
-    var activatingPortals = newPortals.filter(function(portalLocation) {
+    const newPortals = getSetIntersection(portalLocations, object.locations);
+    const activatingPortals = newPortals.filter(function(portalLocation) {
       return oldPortals.indexOf(portalLocation) === -1;
     });
     if (activatingPortals.length === 1) {
       // exactly one new portal we're touching. activate it
       portalActivationLocations.push(activatingPortals[0]);
     }
+    if (activatingPortals.length === 2) {
+      portalsBlocked = true;
+    }
   });
 }
 
 function activatePortal(portalLocations, portalLocation, animations, changeLog) {
-  var otherPortalLocation = portalLocations[1 - portalLocations.indexOf(portalLocation)];
-  var portalRowcol = getRowcol(level, portalLocation);
-  var otherPortalRowcol = getRowcol(level, otherPortalLocation);
-  var delta = {r:otherPortalRowcol.r - portalRowcol.r, c:otherPortalRowcol.c - portalRowcol.c};
+  const otherPortalLocation = portalLocations[1 - portalLocations.indexOf(portalLocation)];
+  const portalRowcol = getRowcol(level, portalLocation);
+  const otherPortalRowcol = getRowcol(level, otherPortalLocation);
+  const delta = {r:otherPortalRowcol.r - portalRowcol.r, c:otherPortalRowcol.c - portalRowcol.c};
 
-  var object = findObjectAtLocation(portalLocation);
-  var newLocations = [];
-  for (var i = 0; i < object.locations.length; i++) {
-    var rowcol = getRowcol(level, object.locations[i]);
-    var r = rowcol.r + delta.r;
-    var c = rowcol.c + delta.c;
-    if (!isInBounds(level, r, c)) return false; // out of bounds
-    newLocations.push(getLocation(level, r, c));
+  let didCollide = false;
+
+  const object = findObjectAtLocation(portalLocation);
+  const newLocations = [];
+
+  // only added to the global map if there is at least one collision (or OOB),
+  // so that diagram isn't drawn on successful teleport
+  const collisionDiagram = {};
+
+  for (let i = 0; i < object.locations.length; i++) {
+    const rowcol = getRowcol(level, object.locations[i]);
+    const r = rowcol.r + delta.r;
+    const c = rowcol.c + delta.c;
+
+    // out of bounds
+    if (!isInBounds(level, r, c)) {
+      didCollide = true;
+      continue;
+    }
+
+    const loc = getLocation(level, r, c)
+    newLocations.push(loc);
+    collisionDiagram[loc] = false
+
+    // blocked by tile
+    if (!isTileCodeAir(level.map[loc])) {
+      didCollide = true;
+      collisionDiagram[loc] = true;
+    }
+
+    // blocked by object
+    const otherObject = findObjectAtLocation(loc);
+    if (otherObject != null && otherObject !== object) {
+      didCollide = true;
+      collisionDiagram[loc] = true;
+    }
   }
 
-  for (var i = 0; i < newLocations.length; i++) {
-    var location = newLocations[i];
-    if (!isTileCodeAir(level.map[location])) return false; // blocked by tile
-    var otherObject = findObjectAtLocation(location);
-    if (otherObject != null && otherObject !== object) return false; // blocked by object
+  // teleport blocked
+  if (didCollide) {
+    // this diagram will be drawn
+    portalCollisionMap = { ...portalCollisionMap, ...collisionDiagram };
+    return false;
   }
 
   // zappo presto!
-  var oldState = serializeObjectState(object);
+  const oldState = serializeObjectState(object);
   object.locations = newLocations;
   changeLog.push([object.type, object.id, oldState, serializeObjectState(object)]);
   animations.push([
@@ -2046,6 +2114,7 @@ function activatePortal(portalLocations, portalLocation, animations, changeLog) 
     delta.r,
     delta.c,
   ]);
+
   return true;
 }
 
@@ -2058,7 +2127,7 @@ function addIfNotPresent(array, element) {
   array.push(element);
 }
 function removeAnyObjectAtLocation(location, changeLog) {
-  var object = findObjectAtLocation(location);
+  const object = findObjectAtLocation(location);
   if (object != null) removeObject(object, changeLog);
 }
 function removeAnimatedObject(object, changeLog) {
@@ -2080,13 +2149,13 @@ function removeObject(object, changeLog) {
   }
 }
 function removeFromArray(array, element) {
-  var index = array.indexOf(element);
+  const index = array.indexOf(element);
   if (index === -1) throw unreachable();
   array.splice(index, 1);
 }
 function findActiveSnake() {
-  var snakes = getSnakes();
-  for (var i = 0; i < snakes.length; i++) {
+  const snakes = getSnakes();
+  for (let i = 0; i < snakes.length; i++) {
     if (snakes[i].id === activeSnakeId) return snakes[i];
   }
   throw unreachable();
@@ -2101,15 +2170,15 @@ function findSnakesOfColor(color) {
   });
 }
 function findObjectOfTypeAndId(type, id) {
-  for (var i = 0; i < level.objects.length; i++) {
-    var object = level.objects[i];
+  for (let i = 0; i < level.objects.length; i++) {
+    const object = level.objects[i];
     if (object.type === type && object.id === id) return object;
   }
   return null;
 }
 function findObjectAtLocation(location) {
-  for (var i = 0; i < level.objects.length; i++) {
-    var object = level.objects[i];
+  for (let i = 0; i < level.objects.length; i++) {
+    const object = level.objects[i];
     if (object.locations.indexOf(location) !== -1)
       return object;
   }
@@ -2119,13 +2188,13 @@ function isUneatenFruit() {
   return getObjectsOfType(FRUIT).length > 0;
 }
 function getActivePortalLocations() {
-  var portalLocations = getPortalLocations();
+  const portalLocations = getPortalLocations();
   if (portalLocations.length !== 2) return []; // nice try
   return portalLocations;
 }
 function getPortalLocations() {
-  var result = [];
-  for (var i = 0; i < level.map.length; i++) {
+  const result = [];
+  for (let i = 0; i < level.map.length; i++) {
     if (level.map[i] === PORTAL) result.push(i);
   }
   return result;
@@ -2154,34 +2223,46 @@ function isAlive() {
   return countSnakes() > 0 && !isDead();
 }
 
-var snakeColors = [
-  "#f00",
-  "#0f0",
-  "#00f",
-  "#ff0",
+const snakeColors = [
+  "#ff0000",
+  "#00ff00",
+  "#0000ff",
+  "#ffff00",
+  "#ff00ff",
+  "#00ffff",
+  "#8000ff",
+  "#ff8000",
+  "#000000",
+  "#ffffff",
 ];
-var snakeColorNames = [
+const snakeColorNames = [
   "Red",
   "Green",
   "Blue",
   "Yellow",
+  "Magenta",
+  "Cyan",
+  "Purple",
+  "Orange",
+  "Black",
+  "White",
 ];
-var blockForeground = ["#de5a6d","#fa65dd","#c367e3","#9c62fa","#625ff0"];
-var blockBackground = ["#853641","#963c84","#753d88","#5d3a96","#3a3990"];
+const blockForeground = ["#de5a6d","#fa65dd","#c764eb","#9c62fa","#625ff0","#27935c","#79c13a","#ccbf4b","#e08645","#9fb9f9"];
+const blockBackground = ["#853641","#963c84","#773c8d","#5d3a96","#3a3990","#175837","#487322","#7a722d","#865029","#5f6f95"];
 
-var activeSnakeId = null;
+let activeSnakeId = null;
 
-var SLITHER_HEAD = "sh";
-var SLITHER_TAIL = "st";
-var MOVE_SNAKE = "ms";
-var MOVE_BLOCK = "mb";
-var TELEPORT_SNAKE = "ts";
-var TELEPORT_BLOCK = "tb";
-var EXIT_SNAKE = "es";
-var DIE_SNAKE = "ds";
-var DIE_BLOCK = "db";
-var INFINITE_LOOP = "il";
-var animationQueue = [
+const SLITHER_HEAD = "sh";
+const SLITHER_TAIL = "st";
+const MOVE_SNAKE = "ms";
+const MOVE_BLOCK = "mb";
+const TELEPORT_SNAKE = "ts";
+const TELEPORT_BLOCK = "tb";
+const EXIT_SNAKE = "es";
+const DIE_SNAKE = "ds";
+const DIE_BLOCK = "db";
+const INFINITE_LOOP = "il";
+let animationQueue = [
   // // sequence of disjoint animation groups.
   // // each group completes before the next begins.
   // [
@@ -2199,38 +2280,46 @@ var animationQueue = [
   //   ],
   // ],
 ];
-var animationQueueCursor = 0;
-var animationStart = null; // new Date().getTime()
-var animationProgress; // 0.0 <= x < 1.0
-var freshlyRemovedAnimatedObjects = [];
+let animationQueueCursor = 0;
+let animationStart = null; // performance.now()
+let animationProgress; // 0.0 <= x < 1.0
+let freshlyRemovedAnimatedObjects = [];
 
 // render the support beams for blocks into a temporary buffer, and remember it.
 // this is due to stencil buffers causing slowdown on some platforms. see #25.
-var blockSupportRenderCache = {
+let blockSupportRenderCache = {
   // id: canvas,
   // "0": document.createElement("canvas"),
 };
 
+let gridPattern;
+
 function render() {
   if (level == null) return;
   if (animationQueueCursor < animationQueue.length) {
-    var animationDuration = animationQueue[animationQueueCursor][0];
-    animationProgress = (new Date().getTime() - animationStart) / animationDuration;
-    if (animationProgress >= 1.0) {
+    let animationDuration = animationQueue[animationQueueCursor][0];
+    animationProgress = (performance.now() - animationStart) / animationDuration;
+    while (animationProgress >= 1.0) {
       // animation group complete
       animationProgress -= 1.0;
       animationQueueCursor++;
-      if (animationQueueCursor < animationQueue.length && animationQueue[animationQueueCursor][1][0] === INFINITE_LOOP) {
-        var infiniteLoopSize = animationQueue[animationQueueCursor][1][1];
-        animationQueueCursor -= infiniteLoopSize;
+      if (animationQueueCursor < animationQueue.length) {
+        animationProgress *= animationDuration;
+        animationDuration = animationQueue[animationQueueCursor][0];
+        animationProgress /= animationDuration;
+        if (animationQueue[animationQueueCursor][1][0] === INFINITE_LOOP) {
+          const infiniteLoopSize = animationQueue[animationQueueCursor][1][1];
+          animationQueueCursor -= infiniteLoopSize;
+        }
       }
-      animationStart = new Date().getTime();
+      animationStart = performance.now();
     }
   }
+  if (animationQueueCursor > animationQueue.length) animationQueueCursor = animationQueue.length;
   if (animationQueueCursor === animationQueue.length) animationProgress = 1.0;
   canvas.width = tileSize * level.width;
   canvas.height = tileSize * level.height;
-  var context = canvas.getContext("2d");
+  let context = canvas.getContext("2d");
   context.fillStyle = "#88f"; // sky
   context.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -2238,18 +2327,39 @@ function render() {
     drawGrid();
   }
 
-  var activePortalLocations = getActivePortalLocations();
+  const activePortalLocations = getActivePortalLocations();
 
   // normal render
   renderLevel();
+
+  // draw portal collision diagram
+  if (Object.keys(portalCollisionMap).length > 0) {
+    for (const key in portalCollisionMap) {
+      const loc = parseInt(key);
+      const {r, c} = getRowcol(level, loc);
+      const collision = portalCollisionMap[key]
+      drawPortalDiagram(r, c, "#ffffff");
+      if (collision) {
+        drawX(r, c, "rgba(256, 85, 85, 0.75)");
+      }
+    }
+  }
+  // draw indicator that both ends of the portal were touched at the same time
+  if (portalsBlocked) {
+    const portalLocs = getPortalLocations();
+    const rowcol1 = getRowcol(level, portalLocs[0]);
+    const rowcol2 = getRowcol(level, portalLocs[1]);
+    drawX(rowcol1.r, rowcol1.c, "rgba(256, 85, 85, 0.75)");
+    drawX(rowcol2.r, rowcol2.c, "rgba(256, 85, 85, 0.75)");
+  }
 
   if (persistentState.showGrid && persistentState.showEditor) {
     drawGrid();
   }
   // active snake halo
   if (countSnakes() !== 0 && isAlive()) {
-    var activeSnake = findActiveSnake();
-    var activeSnakeRowcol = getRowcol(level, activeSnake.locations[0]);
+    const activeSnake = findActiveSnake();
+    const activeSnakeRowcol = getRowcol(level, activeSnake.locations[0]);
     drawCircle(activeSnakeRowcol.r, activeSnakeRowcol.c, 2, "rgba(256,256,256,0.3)");
   }
 
@@ -2260,12 +2370,12 @@ function render() {
         context.fillStyle = "rgba(0, 0, 0, 0.8)";
         context.fillRect(0, 0, canvas.width, canvas.height);
         // and render just this object in focus
-        var activeBlock = findBlockById(paintBrushBlockId);
+        const activeBlock = findBlockById(paintBrushBlockId);
         renderLevel([activeBlock]);
       }
     } else if (paintBrushTileCode === "select") {
       getSelectedLocations().forEach(function(location) {
-        var rowcol = getRowcol(level, location);
+        const rowcol = getRowcol(level, location);
         drawRect(rowcol.r, rowcol.c, "rgba(128, 128, 128, 0.3)");
       });
     }
@@ -2273,9 +2383,9 @@ function render() {
 
   // serialize
   if (!isDead()) {
-    var serialization = stringifyLevel(level);
+    const serialization = stringifyLevel(level);
     document.getElementById("serializationTextarea").value = serialization;
-    var link = location.href.substring(0, location.href.length - location.hash.length);
+    let link = location.href.substring(0, location.href.length - location.hash.length);
     link += "#level=" + compressSerialization(serialization);
     document.getElementById("shareLinkTextbox").value = link;
   }
@@ -2287,7 +2397,7 @@ function render() {
   return; // this is the end of the function proper
 
   function renderLevel(onlyTheseObjects) {
-    var objects = level.objects;
+    let objects = level.objects;
     if (onlyTheseObjects != null) {
       objects = onlyTheseObjects;
     } else {
@@ -2299,61 +2409,61 @@ function render() {
     // begin by rendering the background connections for blocks
     objects.forEach(function(object) {
       if (object.type !== BLOCK) return;
-      var animationDisplacementRowcol = findAnimationDisplacementRowcol(object.type, object.id);
-      var minR = Infinity;
-      var maxR = -Infinity;
-      var minC = Infinity;
-      var maxC = -Infinity;
+      const animationDisplacementRowcol = findAnimationDisplacementRowcol(object.type, object.id);
+      let minR = Infinity;
+      let maxR = -Infinity;
+      let minC = Infinity;
+      let maxC = -Infinity;
       object.locations.forEach(function(location) {
-        var rowcol = getRowcol(level, location);
+        const rowcol = getRowcol(level, location);
         if (rowcol.r < minR) minR = rowcol.r;
         if (rowcol.r > maxR) maxR = rowcol.r;
         if (rowcol.c < minC) minC = rowcol.c;
         if (rowcol.c > maxC) maxC = rowcol.c;
       });
-      var image = blockSupportRenderCache[object.id];
+      let image = blockSupportRenderCache[object.id];
       if (image == null) {
         // render the support beams to a buffer
         blockSupportRenderCache[object.id] = image = document.createElement("canvas");
         image.width  = (maxC - minC + 1) * tileSize;
         image.height = (maxR - minR + 1) * tileSize;
-        var bufferContext = image.getContext("2d");
+        const bufferContext = image.getContext("2d");
         // Make a stencil that excludes the insides of blocks.
         // Then when we render the support beams, we won't see the supports inside the block itself.
         bufferContext.beginPath();
         // Draw a path around the whole screen in the opposite direction as the rectangle paths below.
         // This means that the below rectangles will be removing area from the greater rectangle.
         bufferContext.rect(image.width, 0, -image.width, image.height);
-        for (var i = 0; i < object.locations.length; i++) {
-          var rowcol = getRowcol(level, object.locations[i]);
-          var r = rowcol.r - minR;
-          var c = rowcol.c - minC;
+        for (let i = 0; i < object.locations.length; i++) {
+          const rowcol = getRowcol(level, object.locations[i]);
+          const r = rowcol.r - minR;
+          const c = rowcol.c - minC;
           bufferContext.rect(c * tileSize, r * tileSize, tileSize, tileSize);
         }
         bufferContext.clip();
-        for (var i = 0; i < object.locations.length - 1; i++) {
-          var rowcol1 = getRowcol(level, object.locations[i]);
+        for (let i = 0; i < object.locations.length - 1; i++) {
+          const rowcol1 = getRowcol(level, object.locations[i]);
           rowcol1.r -= minR;
           rowcol1.c -= minC;
-          var rowcol2 = getRowcol(level, object.locations[i + 1]);
+          const rowcol2 = getRowcol(level, object.locations[i + 1]);
           rowcol2.r -= minR;
           rowcol2.c -= minC;
-          var cornerRowcol = {r:rowcol1.r, c:rowcol2.c};
+          const cornerRowcol = {r:rowcol1.r, c:rowcol2.c};
           drawConnector(bufferContext, rowcol1.r, rowcol1.c, cornerRowcol.r, cornerRowcol.c, blockBackground[object.id % blockBackground.length]);
           drawConnector(bufferContext, rowcol2.r, rowcol2.c, cornerRowcol.r, cornerRowcol.c, blockBackground[object.id % blockBackground.length]);
         }
       }
-      var r = minR + animationDisplacementRowcol.r;
-      var c = minC + animationDisplacementRowcol.c;
+      const r = minR + animationDisplacementRowcol.r;
+      const c = minC + animationDisplacementRowcol.c;
       context.drawImage(image, c * tileSize, r * tileSize);
     });
 
     // terrain
     if (onlyTheseObjects == null) {
-      for (var r = 0; r < level.height; r++) {
-        for (var c = 0; c < level.width; c++) {
-          var location = getLocation(level, r, c);
-          var tileCode = level.map[location];
+      for (let r = 0; r < level.height; r++) {
+        for (let c = 0; c < level.width; c++) {
+          const location = getLocation(level, r, c);
+          const tileCode = level.map[location];
           drawTile(tileCode, r, c, level, location);
         }
       }
@@ -2381,14 +2491,14 @@ function render() {
     // editor hover
     if (persistentState.showEditor && paintBrushTileCode != null && hoverLocation != null && hoverLocation < level.map.length) {
 
-      var savedContext = context;
-      var buffer = document.createElement("canvas");
+      const savedContext = context;
+      const buffer = document.createElement("canvas");
       buffer.width = canvas.width;
       buffer.height = canvas.height;
       context = buffer.getContext("2d");
 
-      var hoverRowcol = getRowcol(level, hoverLocation);
-      var objectHere = findObjectAtLocation(hoverLocation);
+      const hoverRowcol = getRowcol(level, hoverLocation);
+      const objectHere = findObjectAtLocation(hoverLocation);
       if (typeof paintBrushTileCode === "number") {
         if (level.map[hoverLocation] !== paintBrushTileCode) {
           drawTile(paintBrushTileCode, hoverRowcol.r, hoverRowcol.c, level, hoverLocation);
@@ -2413,10 +2523,10 @@ function render() {
         void 0; // do nothing
       } else if (paintBrushTileCode === "paste") {
         // show what will be pasted if you click
-        var pastedData = previewPaste(hoverRowcol.r, hoverRowcol.c);
+        const pastedData = previewPaste(hoverRowcol.r, hoverRowcol.c);
         pastedData.selectedLocations.forEach(function(location) {
-          var tileCode = pastedData.level.map[location];
-          var rowcol = getRowcol(level, location);
+          const tileCode = pastedData.level.map[location];
+          const rowcol = getRowcol(level, location);
           drawTile(tileCode, rowcol.r, rowcol.c, pastedData.level, location);
         });
         pastedData.selectedObjects.forEach(drawObject);
@@ -2439,13 +2549,14 @@ function render() {
       case SPIKE:
         drawSpikes(r, c, getAdjacentTiles());
         break;
-      case EXIT:
-        var radiusFactor = isUneatenFruit() ? 0.7 : 1.2;
+      case EXIT: {
+        const radiusFactor = isUneatenFruit() ? 0.7 : 1.2;
         drawQuarterPie(r, c, radiusFactor, "#f00", 0);
         drawQuarterPie(r, c, radiusFactor, "#0f0", 1);
         drawQuarterPie(r, c, radiusFactor, "#00f", 2);
         drawQuarterPie(r, c, radiusFactor, "#ff0", 3);
         break;
+      }
       case PORTAL:
         drawCircle(r, c, 0.8, "#888");
         drawCircle(r, c, 0.6, "#111");
@@ -2474,14 +2585,14 @@ function render() {
 
   function drawObject(object) {
     switch (object.type) {
-      case SNAKE:
-        var animationDisplacementRowcol = findAnimationDisplacementRowcol(object.type, object.id);
-        var lastRowcol = null
-        var color = snakeColors[object.id % snakeColors.length];
-        var headRowcol;
-        for (var i = 0; i <= object.locations.length; i++) {
-          var animation;
-          var rowcol;
+      case SNAKE: {
+        const animationDisplacementRowcol = findAnimationDisplacementRowcol(object.type, object.id);
+        let lastRowcol = null
+        const color = snakeColors[object.id % snakeColors.length];
+        let headRowcol;
+        for (let i = 0; i <= object.locations.length; i++) {
+          let animation;
+          let rowcol;
           if (i === 0 && (animation = findAnimation([SLITHER_HEAD], object.id)) != null) {
             // animate head slithering forward
             rowcol = getRowcol(level, object.locations[i]);
@@ -2510,33 +2621,32 @@ function render() {
             drawDiamond(rowcol.r, rowcol.c, color);
           } else {
             // middle
-            var cx = (rowcol.c + 0.5) * tileSize;
-            var cy = (rowcol.r + 0.5) * tileSize;
+            const cx = (rowcol.c + 0.5) * tileSize;
+            const cy = (rowcol.r + 0.5) * tileSize;
             context.fillStyle = color;
-            var orientation;
             if (lastRowcol.r < rowcol.r) {
-              orientation = 0;
+              //orientation = 0;
               context.beginPath();
               context.moveTo((lastRowcol.c + 0) * tileSize, (lastRowcol.r + 0.5) * tileSize);
               context.lineTo((lastRowcol.c + 1) * tileSize, (lastRowcol.r + 0.5) * tileSize);
               context.arc(cx, cy, tileSize/2, 0, Math.PI);
               context.fill();
             } else if (lastRowcol.r > rowcol.r) {
-              orientation = 2;
+              //orientation = 2;
               context.beginPath();
               context.moveTo((lastRowcol.c + 1) * tileSize, (lastRowcol.r + 0.5) * tileSize);
               context.lineTo((lastRowcol.c + 0) * tileSize, (lastRowcol.r + 0.5) * tileSize);
               context.arc(cx, cy, tileSize/2, Math.PI, 0);
               context.fill();
             } else if (lastRowcol.c < rowcol.c) {
-              orientation = 3;
+              //orientation = 3;
               context.beginPath();
               context.moveTo((lastRowcol.c + 0.5) * tileSize, (lastRowcol.r + 1) * tileSize);
               context.lineTo((lastRowcol.c + 0.5) * tileSize, (lastRowcol.r + 0) * tileSize);
               context.arc(cx, cy, tileSize/2, 1.5 * Math.PI, 2.5 * Math.PI);
               context.fill();
             } else if (lastRowcol.c > rowcol.c) {
-              orientation = 1;
+              //orientation = 1;
               context.beginPath();
               context.moveTo((lastRowcol.c + 0.5) * tileSize, (lastRowcol.r + 0) * tileSize);
               context.lineTo((lastRowcol.c + 0.5) * tileSize, (lastRowcol.r + 1) * tileSize);
@@ -2552,13 +2662,15 @@ function render() {
           drawCircle(headRowcol.r, headRowcol.c, 0.2, "#000");
         }
         break;
+      }
       case BLOCK:
         drawBlock(object);
         break;
-      case FRUIT:
-        var rowcol = getRowcol(level, object.locations[0]);
-        drawCircle(rowcol.r, rowcol.c, 1, "#f0f");
+      case FRUIT: {
+        const fruitRowcol = getRowcol(level, object.locations[0]);
+        drawCircle(fruitRowcol.r, fruitRowcol.c, 1, "#f0f");
         break;
+      }
       default: throw unreachable();
     }
   }
@@ -2569,14 +2681,14 @@ function render() {
     drawTileOutlines(r, c, isWall, 0.2);
 
     function isWall(dc, dr) {
-      var tileCode = adjacentTiles[1 + dr][1 + dc];
+      const tileCode = adjacentTiles[1 + dr][1 + dc];
       return tileCode == null || tileCode === WALL;
     }
   }
   function drawTileOutlines(r, c, isOccupied, outlineThickness) {
-    var complement = 1 - outlineThickness;
-    var outlinePixels = outlineThickness * tileSize;
-    var complementPixels = (1 - 2 * outlineThickness) * tileSize;
+    const complement = 1 - outlineThickness;
+    const outlinePixels = outlineThickness * tileSize;
+    //let complementPixels = (1 - 2 * outlineThickness) * tileSize;
     if (!isOccupied(-1, -1)) context.fillRect((c)            * tileSize, (r)            * tileSize, outlinePixels, outlinePixels);
     if (!isOccupied( 1, -1)) context.fillRect((c+complement) * tileSize, (r)            * tileSize, outlinePixels, outlinePixels);
     if (!isOccupied(-1,  1)) context.fillRect((c)            * tileSize, (r+complement) * tileSize, outlinePixels, outlinePixels);
@@ -2587,31 +2699,31 @@ function render() {
     if (!isOccupied( 1,  0)) context.fillRect((c+complement) * tileSize, (r)            * tileSize, outlinePixels, tileSize);
   }
   function drawSpikes(r, c, adjacentTiles) {
-    var connectU, connectD, connectL, connectR = false;
-    var spikeU = adjacentTiles[0][1] === SPIKE;
-    var spikeD = adjacentTiles[2][1] === SPIKE;
-    var spikeL = adjacentTiles[1][0] === SPIKE;
-    var spikeR = adjacentTiles[1][2] === SPIKE;
-    var wallU = adjacentTiles[0][1] === WALL;
-    var wallD = adjacentTiles[2][1] === WALL;
-    var wallL = adjacentTiles[1][0] === WALL;
-    var wallR = adjacentTiles[1][2] === WALL;
-    var wallUL = wallU && (adjacentTiles[0][0] === WALL || adjacentTiles[0][0] == null);
-    var wallUR = wallU && (adjacentTiles[0][2] === WALL || adjacentTiles[0][2] == null);
-    var wallDL = wallD && (adjacentTiles[2][0] === WALL || adjacentTiles[2][0] == null);
-    var wallDR = wallD && (adjacentTiles[2][2] === WALL || adjacentTiles[2][2] == null);
-    var wallLU = wallL && (adjacentTiles[0][0] === WALL || adjacentTiles[0][0] == null);
-    var wallLD = wallL && (adjacentTiles[2][0] === WALL || adjacentTiles[2][0] == null);
-    var wallRU = wallR && (adjacentTiles[0][2] === WALL || adjacentTiles[0][2] == null);
-    var wallRD = wallR && (adjacentTiles[2][2] === WALL || adjacentTiles[2][2] == null);
-    var solidUL = wallUL || adjacentTiles[0][0] === SPIKE;
-    var solidUR = wallUR || adjacentTiles[0][2] === SPIKE;
-    var solidDL = wallDL || adjacentTiles[2][0] === SPIKE;
-    var solidDR = wallDR || adjacentTiles[2][2] === SPIKE;
-    var solidLU = wallLU || adjacentTiles[0][0] === SPIKE;
-    var solidLD = wallLD || adjacentTiles[2][0] === SPIKE;
-    var solidRU = wallRU || adjacentTiles[0][2] === SPIKE;
-    var solidRD = wallRD || adjacentTiles[2][2] === SPIKE;
+    let connectU, connectD, connectL, connectR = false;
+    const spikeU = adjacentTiles[0][1] === SPIKE;
+    const spikeD = adjacentTiles[2][1] === SPIKE;
+    const spikeL = adjacentTiles[1][0] === SPIKE;
+    const spikeR = adjacentTiles[1][2] === SPIKE;
+    const wallU = adjacentTiles[0][1] === WALL;
+    const wallD = adjacentTiles[2][1] === WALL;
+    const wallL = adjacentTiles[1][0] === WALL;
+    const wallR = adjacentTiles[1][2] === WALL;
+    const wallUL = wallU && (adjacentTiles[0][0] === WALL || adjacentTiles[0][0] == null);
+    const wallUR = wallU && (adjacentTiles[0][2] === WALL || adjacentTiles[0][2] == null);
+    const wallDL = wallD && (adjacentTiles[2][0] === WALL || adjacentTiles[2][0] == null);
+    const wallDR = wallD && (adjacentTiles[2][2] === WALL || adjacentTiles[2][2] == null);
+    const wallLU = wallL && (adjacentTiles[0][0] === WALL || adjacentTiles[0][0] == null);
+    const wallLD = wallL && (adjacentTiles[2][0] === WALL || adjacentTiles[2][0] == null);
+    const wallRU = wallR && (adjacentTiles[0][2] === WALL || adjacentTiles[0][2] == null);
+    const wallRD = wallR && (adjacentTiles[2][2] === WALL || adjacentTiles[2][2] == null);
+    const solidUL = wallUL || adjacentTiles[0][0] === SPIKE;
+    const solidUR = wallUR || adjacentTiles[0][2] === SPIKE;
+    const solidDL = wallDL || adjacentTiles[2][0] === SPIKE;
+    const solidDR = wallDR || adjacentTiles[2][2] === SPIKE;
+    const solidLU = wallLU || adjacentTiles[0][0] === SPIKE;
+    const solidLD = wallLD || adjacentTiles[2][0] === SPIKE;
+    const solidRU = wallRU || adjacentTiles[0][2] === SPIKE;
+    const solidRD = wallRD || adjacentTiles[2][2] === SPIKE;
     switch (0 + spikeU + spikeD + spikeL + spikeR + (spikeU && spikeD) + (spikeL && spikeR)) {
       case 0: { // no adjacent spikes
         // connect to each continuous wall, prefer vertical for single and horizontal for multiple
@@ -2633,10 +2745,10 @@ function render() {
       }
       case 2: { // two adjacent spikes in L
         // detect enclosed wall connections or 2x2 spike squares
-        var enclosedU = wallL && solidUR || wallR && solidUL;
-        var enclosedD = wallL && solidDR || wallR && solidDL;
-        var enclosedL = wallU && solidLD || wallD && solidLU;
-        var enclosedR = wallU && solidRD || wallD && solidRU;
+        const enclosedU = wallL && solidUR || wallR && solidUL;
+        const enclosedD = wallL && solidDR || wallR && solidDL;
+        const enclosedL = wallU && solidLD || wallD && solidLU;
+        const enclosedR = wallU && solidRD || wallD && solidRU;
         // connect to unenclosed wall ends or mid-wall spike squares
         connectU = wallU && !(enclosedU || spikeL && wallUR && solidUL && !enclosedL || spikeR && wallUL && solidUR && !enclosedR);
         connectD = wallD && !(enclosedD || spikeL && wallDR && solidDL && !enclosedL || spikeR && wallDL && solidDR && !enclosedR);
@@ -2663,8 +2775,8 @@ function render() {
       default: break;
     }
 
-    var x = c * tileSize;
-    var y = r * tileSize;
+    const x = c * tileSize;
+    const y = r * tileSize;
     context.fillStyle = "#333";
     context.beginPath();
     context.moveTo(x + tileSize * 0.3, y + tileSize * 0.3);
@@ -2709,33 +2821,33 @@ function render() {
   function drawConnector(context, r1, c1, r2, c2, color) {
     // either r1 and r2 or c1 and c2 must be equal
     if (r1 > r2 || c1 > c2) {
-      var rTmp = r1;
-      var cTmp = c1;
+      const rTmp = r1;
+      const cTmp = c1;
       r1 = r2;
       c1 = c2;
       r2 = rTmp;
       c2 = cTmp;
     }
-    var xLo = (c1 + 0.4) * tileSize;
-    var yLo = (r1 + 0.4) * tileSize;
-    var xHi = (c2 + 0.6) * tileSize;
-    var yHi = (r2 + 0.6) * tileSize;
+    const xLo = (c1 + 0.4) * tileSize;
+    const yLo = (r1 + 0.4) * tileSize;
+    const xHi = (c2 + 0.6) * tileSize;
+    const yHi = (r2 + 0.6) * tileSize;
     context.fillStyle = color;
     context.fillRect(xLo, yLo, xHi - xLo, yHi - yLo);
   }
   function drawBlock(block) {
-    var animationDisplacementRowcol = findAnimationDisplacementRowcol(block.type, block.id);
-    var rowcols = block.locations.map(function(location) {
+    const animationDisplacementRowcol = findAnimationDisplacementRowcol(block.type, block.id);
+    const rowcols = block.locations.map(function(location) {
       return getRowcol(level, location);
     });
     rowcols.forEach(function(rowcol) {
-      var r = rowcol.r + animationDisplacementRowcol.r;
-      var c = rowcol.c + animationDisplacementRowcol.c;
+      const r = rowcol.r + animationDisplacementRowcol.r;
+      const c = rowcol.c + animationDisplacementRowcol.c;
       context.fillStyle = blockForeground[block.id % blockForeground.length];
       drawTileOutlines(r, c, isAlsoThisBlock, 0.3);
       function isAlsoThisBlock(dc, dr) {
-        for (var i = 0; i < rowcols.length; i++) {
-          var otherRowcol = rowcols[i];
+        for (let i = 0; i < rowcols.length; i++) {
+          const otherRowcol = rowcols[i];
           if (rowcol.r + dr === otherRowcol.r && rowcol.c + dc === otherRowcol.c) return true;
         }
         return false;
@@ -2743,8 +2855,8 @@ function render() {
     });
   }
   function drawQuarterPie(r, c, radiusFactor, fillStyle, quadrant) {
-    var cx = (c + 0.5) * tileSize;
-    var cy = (r + 0.5) * tileSize;
+    const cx = (c + 0.5) * tileSize;
+    const cy = (r + 0.5) * tileSize;
     context.fillStyle = fillStyle;
     context.beginPath();
     context.moveTo(cx, cy);
@@ -2752,8 +2864,8 @@ function render() {
     context.fill();
   }
   function drawDiamond(r, c, fillStyle) {
-    var x = c * tileSize;
-    var y = r * tileSize;
+    const x = c * tileSize;
+    const y = r * tileSize;
     context.fillStyle = fillStyle;
     context.beginPath();
     context.moveTo(x + tileSize/2, y);
@@ -2773,37 +2885,82 @@ function render() {
     context.fillStyle = fillStyle;
     context.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
   }
+  function drawPoly(r, c, points) {
+    const x = r * tileSize;
+    const y = c * tileSize;
+    context.moveTo(y + points[0][1] * tileSize, x + points[0][0] * tileSize);
+    for (let i = 1; i < points.length; i++) {
+      context.lineTo(y + points[i][1] * tileSize, x + points[i][0] * tileSize);
+    }
+  }
+  function drawPortalDiagram(r, c, fillStyle) {
+    const cornerLU = [
+      [-1/30, -1/30], [4/30, -1/30], [4/30, 1/30], [1/30, 1/30],
+      [1/30, 4/30], [-1/30, 4/30], [-1/30, -1/30]
+    ];
+    const cornerLD = cornerLU.map(function(p) { return [1 - p[0], p[1]]; });     // Mirror Y
+    const cornerRU = cornerLU.map(function(p) { return [p[0], 1 - p[1]]; });     // Mirror X
+    const cornerRD = cornerLU.map(function(p) { return [1 - p[0], 1 - p[1]]; }); // Mirror X & Y
 
+    const sideL = [[12/30, -1/30], [18/30, -1/30], [18/30, 1/30], [12/30, 1/30], [12/30, -1/30]];
+    const sideR = sideL.map(function(p) { return [p[0], 1 - p[1]]; }); // Mirror X
+    const sideU = sideL.map(function(p) { return [p[1], p[0]]; });     // Swap X & Y
+    const sideD = sideL.map(function(p) { return [1 - p[1], p[0]]; }); // Mirror X, swap X & Y
+
+    context.beginPath();
+    drawPoly(r, c, cornerLU);
+    drawPoly(r, c, cornerLD);
+    drawPoly(r, c, cornerRU);
+    drawPoly(r, c, cornerRD);
+    drawPoly(r, c, sideL);
+    drawPoly(r, c, sideR);
+    drawPoly(r, c, sideU);
+    drawPoly(r, c, sideD);
+    context.fillStyle = fillStyle;
+    context.fill();
+  }
+  function drawX(r, c, fillStyle) {
+    context.beginPath();
+    const t = 4/30;
+    const points = [
+      [t, 0], [0.5, 0.5-t], [1-t, 0], [1, t], [0.5+t, 0.5], [1, 1-t],
+      [1-t, 1], [0.5, 0.5+t], [t, 1], [0, 1-t], [0.5-t, 0.5], [0, t], [t, 0]
+    ];
+    drawPoly(r, c, points);
+    context.fillStyle = fillStyle;
+    context.fill();
+  }
+
+  function drawGridPattern() {
+    const patternCanvas = document.createElement("canvas");
+    patternCanvas.width = tileSize;
+    patternCanvas.height = tileSize;
+    const patternContext = patternCanvas.getContext("2d");
+    patternContext.strokeStyle = "#fff";
+    patternContext.beginPath();
+    patternContext.moveTo(0, 0);
+    patternContext.lineTo(0, tileSize);
+    patternContext.lineTo(tileSize, tileSize);
+    patternContext.lineTo(tileSize, 0);
+    patternContext.lineTo(0, 0);
+    patternContext.stroke();
+    return context.createPattern(patternCanvas, 'repeat');
+  }
   function drawGrid() {
-    var buffer = document.createElement("canvas");
-    buffer.width = canvas.width;
-    buffer.height = canvas.height;
-    var localContext = buffer.getContext("2d");
-
-    localContext.strokeStyle = "#fff";
-    localContext.beginPath();
-    for (var r = 0; r < level.height; r++) {
-      localContext.moveTo(0, tileSize*r);
-      localContext.lineTo(tileSize*level.width, tileSize*r);
-    }
-    for (var c = 0; c < level.width; c++) {
-      localContext.moveTo(tileSize*c, 0);
-      localContext.lineTo(tileSize*c, tileSize*level.height);
-    }
-    localContext.stroke();
-
+    if (gridPattern === undefined) gridPattern = drawGridPattern();
     context.save();
     context.globalAlpha = 0.4;
-    context.drawImage(buffer, 0, 0);
+    context.fillStyle = gridPattern;
+    context.fillRect(0, 0, canvas.width, canvas.height);
     context.restore();
   }
 }
 
 function findAnimation(animationTypes, objectId) {
   if (animationQueueCursor === animationQueue.length) return null;
-  var currentAnimation = animationQueue[animationQueueCursor];
-  for (var i = 1; i < currentAnimation.length; i++) {
-    var animation = currentAnimation[i];
+  const currentAnimation = animationQueue[animationQueueCursor];
+  for (let i = 1; i < currentAnimation.length; i++) {
+    const animation = currentAnimation[i];
     if (animationTypes.indexOf(animation[0]) !== -1 &&
         animation[1] === objectId) {
       return animation;
@@ -2811,17 +2968,17 @@ function findAnimation(animationTypes, objectId) {
   }
 }
 function findAnimationDisplacementRowcol(objectType, objectId) {
-  var dr = 0;
-  var dc = 0;
-  var animationTypes = [
+  let dr = 0;
+  let dc = 0;
+  const animationTypes = [
     "m" + objectType, // MOVE_SNAKE | MOVE_BLOCK
     "t" + objectType, // TELEPORT_SNAKE | TELEPORT_BLOCK
   ];
   // skip the current one
-  for (var i = animationQueueCursor + 1; i < animationQueue.length; i++) {
-    var animations = animationQueue[i];
-    for (var j = 1; j < animations.length; j++) {
-      var animation = animations[j];
+  for (let i = animationQueueCursor + 1; i < animationQueue.length; i++) {
+    const animations = animationQueue[i];
+    for (let j = 1; j < animations.length; j++) {
+      const animation = animations[j];
       if (animationTypes.indexOf(animation[0]) !== -1 &&
           animation[1] === objectId) {
         dr += animation[2];
@@ -2829,7 +2986,7 @@ function findAnimationDisplacementRowcol(objectType, objectId) {
       }
     }
   }
-  var movementAnimation = findAnimation(animationTypes, objectId);
+  const movementAnimation = findAnimation(animationTypes, objectId);
   if (movementAnimation != null) {
     dr += movementAnimation[2] * (1 - animationProgress);
     dc += movementAnimation[3] * (1 - animationProgress);
@@ -2837,14 +2994,14 @@ function findAnimationDisplacementRowcol(objectType, objectId) {
   return {r: -dr, c: -dc};
 }
 function hasFutureRemoveAnimation(object) {
-  var animationTypes = [
+  const animationTypes = [
     EXIT_SNAKE,
     DIE_BLOCK,
   ];
-  for (var i = animationQueueCursor; i < animationQueue.length; i++) {
-    var animations = animationQueue[i];
-    for (var j = 1; j < animations.length; j++) {
-      var animation = animations[j];
+  for (let i = animationQueueCursor; i < animationQueue.length; i++) {
+    const animations = animationQueue[i];
+    for (let j = 1; j < animations.length; j++) {
+      const animation = animations[j];
       if (animationTypes.indexOf(animation[0]) !== -1 &&
           animation[1] === object.id) {
         return true;
@@ -2854,26 +3011,26 @@ function hasFutureRemoveAnimation(object) {
 }
 
 function previewPaste(hoverR, hoverC) {
-  var offsetR = hoverR - clipboardOffsetRowcol.r;
-  var offsetC = hoverC - clipboardOffsetRowcol.c;
+  const offsetR = hoverR - clipboardOffsetRowcol.r;
+  const offsetC = hoverC - clipboardOffsetRowcol.c;
 
-  var newLevel = JSON.parse(JSON.stringify(level));
-  var selectedLocations = [];
-  var selectedObjects = [];
+  const newLevel = JSON.parse(JSON.stringify(level));
+  const selectedLocations = [];
+  const selectedObjects = [];
   clipboardData.selectedLocations.forEach(function(location) {
-    var tileCode = clipboardData.level.map[location];
-    var rowcol = getRowcol(clipboardData.level, location);
-    var r = rowcol.r + offsetR;
-    var c = rowcol.c + offsetC;
+    const tileCode = clipboardData.level.map[location];
+    const rowcol = getRowcol(clipboardData.level, location);
+    const r = rowcol.r + offsetR;
+    const c = rowcol.c + offsetC;
     if (!isInBounds(newLevel, r, c)) return;
-    var newLocation = getLocation(newLevel, r, c);
+    const newLocation = getLocation(newLevel, r, c);
     newLevel.map[newLocation] = tileCode;
     selectedLocations.push(newLocation);
   });
   clipboardData.selectedObjects.forEach(function(object) {
-    var newLocations = [];
-    for (var i = 0; i < object.locations.length; i++) {
-      var rowcol = getRowcol(clipboardData.level, object.locations[i]);
+    const newLocations = [];
+    for (let i = 0; i < object.locations.length; i++) {
+      const rowcol = getRowcol(clipboardData.level, object.locations[i]);
       rowcol.r += offsetR;
       rowcol.c += offsetC;
       if (!isInBounds(newLevel, rowcol.r, rowcol.c)) {
@@ -2885,11 +3042,11 @@ function previewPaste(hoverR, hoverC) {
         // just skip it
         continue;
       }
-      var newLocation = getLocation(newLevel, rowcol.r, rowcol.c);
+      const newLocation = getLocation(newLevel, rowcol.r, rowcol.c);
       newLocations.push(newLocation);
     }
     if (newLocations.length === 0) return; // can't have a non-present object
-    var newObject = JSON.parse(JSON.stringify(object));
+    const newObject = JSON.parse(JSON.stringify(object));
     newObject.locations = newLocations;
     selectedObjects.push(newObject);
   });
@@ -2902,24 +3059,24 @@ function previewPaste(hoverR, hoverC) {
 
 function getNaiveOrthogonalPath(a, b) {
   // does not include a, but does include b.
-  var rowcolA = getRowcol(level, a);
-  var rowcolB = getRowcol(level, b);
-  var path = [];
+  const rowcolA = getRowcol(level, a);
+  const rowcolB = getRowcol(level, b);
+  const path = [];
   if (rowcolA.r < rowcolB.r) {
-    for (var r = rowcolA.r; r < rowcolB.r; r++) {
+    for (let r = rowcolA.r; r < rowcolB.r; r++) {
       path.push(getLocation(level, r + 1, rowcolA.c));
     }
   } else {
-    for (var r = rowcolA.r; r > rowcolB.r; r--) {
+    for (let r = rowcolA.r; r > rowcolB.r; r--) {
       path.push(getLocation(level, r - 1, rowcolA.c));
     }
   }
   if (rowcolA.c < rowcolB.c) {
-    for (var c = rowcolA.c; c < rowcolB.c; c++) {
+    for (let c = rowcolA.c; c < rowcolB.c; c++) {
       path.push(getLocation(level, rowcolB.r, c + 1));
     }
   } else {
-    for (var c = rowcolA.c; c > rowcolB.c; c--) {
+    for (let c = rowcolA.c; c > rowcolB.c; c--) {
       path.push(getLocation(level, rowcolB.r, c - 1));
     }
   }
@@ -2952,7 +3109,7 @@ function makeScaleCoordinatesFunction(width1, width2, offset) {
   };
 }
 
-var expectHash;
+let expectHash;
 window.addEventListener("hashchange", function() {
   if (location.hash === expectHash) {
     // We're in the middle of saveLevel() or saveReplay().
@@ -2964,18 +3121,19 @@ window.addEventListener("hashchange", function() {
   loadFromLocationHash();
 });
 function loadFromLocationHash() {
-  var hashSegments = location.hash.split("#");
+  const hashSegments = location.hash.split("#");
   hashSegments.shift(); // first element is always ""
   if (!(1 <= hashSegments.length && hashSegments.length <= 2)) return false;
-  var hashPairs = hashSegments.map(function(segment) {
-    var equalsIndex = segment.indexOf("=");
+  const hashPairs = hashSegments.map(function(segment) {
+    const equalsIndex = segment.indexOf("=");
     if (equalsIndex === -1) return ["", segment]; // bad
     return [segment.substring(0, equalsIndex), segment.substring(equalsIndex + 1)];
   });
 
   if (hashPairs[0][0] !== "level") return false;
+  let level;
   try {
-    var level = parseLevel(hashPairs[0][1]);
+    level = parseLevel(hashPairs[0][1]);
   } catch (e) {
     alert(e);
     return false;
@@ -2994,10 +3152,10 @@ function loadFromLocationHash() {
 }
 
 // run test suite
-var testTime = new Date().getTime();
+let testTime = performance.now();
 if (compressSerialization(stringifyLevel(parseLevel(testLevel_v0))) !== testLevel_v0_converted) throw new Error("v0 level conversion is broken");
 // ask the debug console for this variable if you're concerned with how much time this wastes.
-testTime = new Date().getTime() - testTime;
+testTime = performance.now() - testTime;
 
 loadPersistentState();
 if (!loadFromLocationHash()) {
@@ -3029,7 +3187,7 @@ updateViewportMirror(window.visualViewport);
 
 // toggle touch controls
 document.getElementById("touchControlsButton").addEventListener("click", function() {
-  var controls = document.getElementById("touchControls");
+  const controls = document.getElementById("touchControls");
   if (controls.style.visibility === "visible") {
     controls.style.visibility = "hidden";
   } else {
@@ -3050,8 +3208,8 @@ document.getElementById("touchRestartButton").addEventListener("click", function
   render();
 });
 // unmove and remove are holdable
-var holdTimeout = 0;
-var holdInterval = 0;
+let holdTimeout = 0;
+let holdInterval = 0;
 document.getElementById("touchUnmoveButton").addEventListener("pointerdown", function(event) {
   if (!event.isPrimary) return;
   undo(unmoveStuff);
