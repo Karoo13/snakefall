@@ -1,14 +1,67 @@
 <html>
   <head>
     <title>Snakefall</title>
+    <meta name="color-scheme" content="dark light"/>
     <meta name="viewport" content="interactive-widget=overlays-content"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+    <style>
+      * {
+        margin: 0px;
+        padding: 0px;
+        box-sizing: border-box;
+      }
+      :root {
+        color-scheme: light;
+        --bg: #fff;
+        --fg: #000;
+        --ta-fg: #000;
+      }
+      :root[data-theme="light"] {
+        color-scheme: light;
+        --bg: #fff;
+        --fg: #000;
+        --ta-fg: #000;
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #2c3034;
+        --fg: #eee;
+        --ta-fg: #bbb;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --bg: #2c3034;
+          --fg: #eee;
+          --ta-fg: #bbb;
+        }
+      }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+      }
+      button {
+        padding: 1px 3px;
+      }
+      textarea {
+        background: var(--bg);
+        color: var(--ta-fg);
+      }
+      .material-symbols-outlined {
+        position: absolute;
+        background-color: #0ff4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: inherit;
+      }
+    </style>
   </head>
-  <body style="touch-action:manipulation; min-width:max-content;">
-    <table style="margin:0px auto;"><tr>
+  <body style="touch-action:manipulation; min-width:max-content; padding:6px">
+    <table style="margin:6px auto;"><tr>
       <td><canvas id="canvas" width=750 height=600 style="touch-action:pinch-zoom;"></canvas></td>
       <td id="editorPane" style="display:none;">
-        <table>
+        <table style="margin-left:6px;">
           <tr><td><button onpointerdown="event.preventDefault();" id="saveLevelButton" title="Ctrl+Shift+S - save the current state to the browser URL bar, clears move history">Save Level</button></td></tr>
           <tr><td>
             <button onpointerdown="event.preventDefault();" id="uneditButton" title="Ctrl+Z" disabled>Unedit &lt;&lt;</button>
@@ -75,17 +128,17 @@
     <div id="visualViewportMirror" style="position:fixed; visibility:hidden; font-size:3vh;">
       <div id="touchControls" onselectstart="event.preventDefault();" oncontextmenu="event.preventDefault();" style="touch-action:pan-x pan-y; position:absolute; top:52%; left:0%; bottom:0%; right:0%; font-family:'Material Symbols Outlined'; visibility:hidden;">
         <div style="position:absolute; top:0%; left:-50%; bottom:-50%; right:-50%; background-color:#000c;"></div>
-        <div id="touchUnmoveButton"  class="material-symbols-outlined" style="position:absolute; top:1%;  left:0%;  height:20%; width:36%; background-color:#0ff4; display:flex; align-items:center; justify-content:center; font-size:inherit; touch-action:none;">undo</div>
-        <div id="touchRestartButton" class="material-symbols-outlined" style="position:absolute; top:1%;  left:37%; height:20%; width:26%; background-color:#0ff4; display:flex; align-items:center; justify-content:center; font-size:inherit;">skip_previous</div>
-        <div id="touchRemoveButton"  class="material-symbols-outlined" style="position:absolute; top:1%;  left:64%; height:20%; width:36%; background-color:#0ff4; display:flex; align-items:center; justify-content:center; font-size:inherit; touch-action:none;">redo</div>
-        <div id="touchUpButton"      class="material-symbols-outlined" style="position:absolute; top:22%; left:0%; height:20%; width:100%; background-color:#0ff4; display:flex; align-items:center; justify-content:center; font-size:inherit;">keyboard_arrow_up</div>
-        <div id="touchLeftButton"    class="material-symbols-outlined" style="position:absolute; top:43%; left:0%;  height:20%; width:36%; background-color:#0ff4; display:flex; align-items:center; justify-content:center; font-size:inherit;">keyboard_arrow_left</div>
-        <div id="touchSwitchButton"  class="material-symbols-outlined" style="position:absolute; top:43%; left:37%; height:20%; width:26%; background-color:#0ff4; display:flex; align-items:center; justify-content:center; font-size:inherit;">swap_horiz</div>
-        <div id="touchRightButton"   class="material-symbols-outlined" style="position:absolute; top:43%; left:64%; height:20%; width:36%; background-color:#0ff4; display:flex; align-items:center; justify-content:center; font-size:inherit;">keyboard_arrow_right</div>
-        <div id="touchDownButton"    class="material-symbols-outlined" style="position:absolute; top:64%; left:0%; height:20%; width:100%; background-color:#0ff4; display:flex; align-items:center; justify-content:center; font-size:inherit;">keyboard_arrow_down</div>
-        <div id="touchGridButton"    class="material-symbols-outlined" style="position:absolute; top:85%; left:0%;  height:15%; width:36%; background-color:#0ff4; display:flex; align-items:center; justify-content:center; font-size:inherit;">grid_3x3</div>
-        <div id="touchHideButton"    class="material-symbols-outlined" style="position:absolute; top:85%; left:37%; height:15%; width:26%; background-color:#0ff4; display:flex; align-items:center; justify-content:center; font-size:inherit;">keyboard_double_arrow_down</div>
-        <div id="touchSaveButton"    class="material-symbols-outlined" style="position:absolute; top:85%; left:64%; height:15%; width:36%; background-color:#0ff4; display:flex; align-items:center; justify-content:center; font-size:inherit;">save</div>
+        <div id="touchUnmoveButton"  class="material-symbols-outlined" style="top:1%;  left:0%;  height:20%; width:36%;; touch-action:none;">undo</div>
+        <div id="touchRestartButton" class="material-symbols-outlined" style="top:1%;  left:37%; height:20%; width:26%;;">skip_previous</div>
+        <div id="touchRemoveButton"  class="material-symbols-outlined" style="top:1%;  left:64%; height:20%; width:36%;; touch-action:none;">redo</div>
+        <div id="touchUpButton"      class="material-symbols-outlined" style="top:22%; left:0%; height:20%; width:100%;;">keyboard_arrow_up</div>
+        <div id="touchLeftButton"    class="material-symbols-outlined" style="top:43%; left:0%;  height:20%; width:36%;;">keyboard_arrow_left</div>
+        <div id="touchSwitchButton"  class="material-symbols-outlined" style="top:43%; left:37%; height:20%; width:26%;;">swap_horiz</div>
+        <div id="touchRightButton"   class="material-symbols-outlined" style="top:43%; left:64%; height:20%; width:36%;;">keyboard_arrow_right</div>
+        <div id="touchDownButton"    class="material-symbols-outlined" style="top:64%; left:0%; height:20%; width:100%;;">keyboard_arrow_down</div>
+        <div id="touchGridButton"    class="material-symbols-outlined" style="top:85%; left:0%;  height:15%; width:36%;;">grid_3x3</div>
+        <div id="touchHideButton"    class="material-symbols-outlined" style="top:85%; left:37%; height:15%; width:26%;;">keyboard_double_arrow_down</div>
+        <div id="touchSaveButton"    class="material-symbols-outlined" style="top:85%; left:64%; height:15%; width:36%;;">save</div>
       </div>
     </div>
 

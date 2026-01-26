@@ -1,6 +1,6 @@
 function unreachable() { return new Error("unreachable"); }
 if (typeof VERSION === "undefined") {
-  document.getElementById("versionSpan").innerHTML = "v.1.4";
+  document.getElementById("versionSpan").innerHTML = "v.1.5";
 }
 var canvas = document.getElementById("canvas");
 
@@ -557,6 +557,9 @@ function switchSnakes(delta) {
   }
   activeSnakeId = snakes[0].id;
 }
+document.getElementById("toggleDarkLight").addEventListener("click", function() {
+  toggleDarkLight();
+});
 document.getElementById("showGridButton").addEventListener("click", function() {
   toggleGrid();
 });
@@ -587,6 +590,15 @@ function toggleShowEditor() {
   persistentState.showEditor = !persistentState.showEditor;
   savePersistentState();
   showEditorChanged();
+}
+function toggleDarkLight() {
+  if (document.getElementById("toggleDarkLight").textContent === "Light") {
+    document.documentElement.dataset.theme = "light";
+    document.getElementById("toggleDarkLight").textContent = "Dark";
+  } else {
+    document.documentElement.dataset.theme = "dark";
+    document.getElementById("toggleDarkLight").textContent = "Light";
+  }
 }
 function toggleGrid() {
   persistentState.showGrid = !persistentState.showGrid;
@@ -2272,13 +2284,19 @@ function render() {
       // animation group complete
       animationProgress -= 1.0;
       animationQueueCursor++;
-      if (animationQueueCursor < animationQueue.length && animationQueue[animationQueueCursor][1][0] === INFINITE_LOOP) {
-        var infiniteLoopSize = animationQueue[animationQueueCursor][1][1];
-        animationQueueCursor -= infiniteLoopSize;
+      if (animationQueueCursor < animationQueue.length) {
+        animationProgress *= animationDuration;
+        animationDuration = animationQueue[animationQueueCursor][0];
+        animationProgress /= animationDuration;
+        if (animationQueue[animationQueueCursor][1][0] === INFINITE_LOOP) {
+          var infiniteLoopSize = animationQueue[animationQueueCursor][1][1];
+          animationQueueCursor -= infiniteLoopSize;
+        }
       }
       animationStart = performance.now();
     }
   }
+  if (animationQueueCursor > animationQueue.length) animationQueueCursor = animationQueue.length;
   if (animationQueueCursor === animationQueue.length) animationProgress = 1.0;
   canvas.width = tileSize * level.width;
   canvas.height = tileSize * level.height;
