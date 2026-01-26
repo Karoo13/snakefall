@@ -11,16 +11,10 @@
         box-sizing: border-box;
       }
       :root {
-        color-scheme: light;
-        --bg: #fff;
-        --fg: #000;
-        --ta-fg: #000;
-      }
-      :root[data-theme="light"] {
-        color-scheme: light;
-        --bg: #fff;
-        --fg: #000;
-        --ta-fg: #000;
+        color-scheme: dark;
+        --bg: #2c3034;
+        --fg: #eee;
+        --ta-fg: #bbb;
       }
       :root[data-theme="dark"] {
         color-scheme: dark;
@@ -28,12 +22,18 @@
         --fg: #eee;
         --ta-fg: #bbb;
       }
-      @media (prefers-color-scheme: dark) {
+      :root[data-theme="light"] {
+        color-scheme: light;
+        --bg: #fff;
+        --fg: #000;
+        --ta-fg: #000;
+      }
+      @media (prefers-color-scheme: light) {
         :root {
-          color-scheme: dark;
-          --bg: #2c3034;
-          --fg: #eee;
-          --ta-fg: #bbb;
+          color-scheme: light;
+          --bg: #fff;
+          --fg: #000;
+          --ta-fg: #000;
         }
       }
       body {
@@ -118,7 +118,7 @@
 
     <table>
       <tr><td><button onpointerdown="event.preventDefault();" id="showHideEditor" title="Shift+E">Show Editor</button>
-              <button onpointerdown="event.preventDefault();" id="toggleDarkLight">Dark</button></td></tr>
+              <button onpointerdown="event.preventDefault();" id="toggleDarkLight">Light</button></td></tr>
       <tr><td>
         <div id="editorDiv" style="display:none;">
           <textarea id="serializationTextarea" rows=30 cols=80></textarea>
