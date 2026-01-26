@@ -2445,6 +2445,8 @@ var blockSupportRenderCache = {
   // "0": document.createElement("canvas"),
 };
 
+var gridPattern;
+
 function render() {
   if (level == null) return;
   if (animationQueueCursor < animationQueue.length) {
@@ -2955,24 +2957,23 @@ function render() {
   function drawGate(r, c, isClosed) {
     if (isClosed)
     {
-      context.lineWidth = 3;
-      context.strokeStyle = "#444";
+      context.fillStyle = "#444";
       context.beginPath();
-      for (var i = 1; i < 3; i++) {
-        context.beginPath();
-        context.moveTo(c*tileSize + i*tileSize/3, r*tileSize);
-        context.lineTo(c*tileSize + i*tileSize/3, (r+1)*tileSize);
-        context.stroke();
+      for (var i = 9; i <= 18; i += 9) {
+        context.moveTo((c + i/30)*tileSize, r*tileSize);
+        context.lineTo((c + (i+3)/30)*tileSize, r*tileSize);
+        context.lineTo((c + (i+3)/30)*tileSize, (r+1)*tileSize);
+        context.lineTo((c + i/30) * tileSize, (r+1)*tileSize);
+        context.lineTo((c + i/30)*tileSize, r*tileSize);
       }
-
-      for (var i = 1; i < 4; i++) {
-        context.beginPath();
-        context.moveTo(c*tileSize, r*tileSize + i*tileSize/4 + tileSize/15);
-        context.lineTo((c+1)*tileSize, r*tileSize + i*tileSize/4 + tileSize/15);
-        context.stroke();
+      for (var i = 9; i <= 23; i += 7) {
+        context.moveTo(c*tileSize, (r + i/30)*tileSize);
+        context.lineTo((c+1) * tileSize, (r + i/30)*tileSize);
+        context.lineTo((c+1)*tileSize, (r + (i+3)/30)*tileSize);
+        context.lineTo(c*tileSize, (r + (i+3)/30)*tileSize);
+        context.lineTo(c*tileSize, (r + i/30)*tileSize);
       }
-
-      context.lineWidth = 0;
+      context.fill();
     }
 
     context.fillStyle = "#777";
@@ -3242,14 +3243,14 @@ function render() {
   }
   function drawPortalDiagram(r, c, fillStyle) {
     var cornerLU = [
-      [-0.05, -0.05], [0.15, -0.05], [0.15, 0.05], [0.05, 0.05],
-      [0.05, 0.15], [-0.05, 0.15], [-0.05, -0.05]
+      [-1/30, -1/30], [4/30, -1/30], [4/30, 1/30], [1/30, 1/30],
+      [1/30, 4/30], [-1/30, 4/30], [-1/30, -1/30]
     ];
     var cornerLD = cornerLU.map(function(p) { return [1 - p[0], p[1]]; });     // Mirror Y
     var cornerRU = cornerLU.map(function(p) { return [p[0], 1 - p[1]]; });     // Mirror X
     var cornerRD = cornerLU.map(function(p) { return [1 - p[0], 1 - p[1]]; }); // Mirror X & Y
 
-    var sideL = [[0.4, -0.05], [0.6, -0.05], [0.6, 0.05], [0.4, 0.05], [0.4, -0.05]];
+    var sideL = [[12/30, -1/30], [18/30, -1/30], [18/30, 1/30], [12/30, 1/30], [12/30, -1/30]];
     var sideR = sideL.map(function(p) { return [p[0], 1 - p[1]]; }); // Mirror X
     var sideU = sideL.map(function(p) { return [p[1], p[0]]; });     // Swap X & Y
     var sideD = sideL.map(function(p) { return [1 - p[1], p[0]]; }); // Mirror X, swap X & Y
@@ -3268,36 +3269,37 @@ function render() {
   }
   function drawX(r, c, fillStyle) {
     context.beginPath();
+    var t = 4/30;
     var points = [
-      [0.15, 0], [0.5, 0.35], [0.85, 0], [1, 0.15], [0.65, 0.5], [1, 0.85],
-      [0.85, 1], [0.5, 0.65], [0.15, 1], [0, 0.85], [0.35, 0.5], [0, 0.15], [0.15, 0]
+      [t, 0], [0.5, 0.5-t], [1-t, 0], [1, t], [0.5+t, 0.5], [1, 1-t],
+      [1-t, 1], [0.5, 0.5+t], [t, 1], [0, 1-t], [0.5-t, 0.5], [0, t], [t, 0]
     ];
     drawPoly(r, c, points);
     context.fillStyle = fillStyle;
     context.fill();
   }
 
+  function drawGridPattern() {
+    var patternCanvas = document.createElement("canvas");
+    patternCanvas.width = tileSize;
+    patternCanvas.height = tileSize;
+    var patternContext = patternCanvas.getContext("2d");
+    patternContext.strokeStyle = "#fff";
+    patternContext.beginPath();
+    patternContext.moveTo(0, 0);
+    patternContext.lineTo(0, tileSize);
+    patternContext.lineTo(tileSize, tileSize);
+    patternContext.lineTo(tileSize, 0);
+    patternContext.lineTo(0, 0);
+    patternContext.stroke();
+    return context.createPattern(patternCanvas, 'repeat');
+  }
   function drawGrid() {
-    var buffer = document.createElement("canvas");
-    buffer.width = canvas.width;
-    buffer.height = canvas.height;
-    var localContext = buffer.getContext("2d");
-
-    localContext.strokeStyle = "#fff";
-    localContext.beginPath();
-    for (var r = 0; r < level.height; r++) {
-      localContext.moveTo(0, tileSize*r);
-      localContext.lineTo(tileSize*level.width, tileSize*r);
-    }
-    for (var c = 0; c < level.width; c++) {
-      localContext.moveTo(tileSize*c, 0);
-      localContext.lineTo(tileSize*c, tileSize*level.height);
-    }
-    localContext.stroke();
-
+    if (gridPattern === undefined) gridPattern = drawGridPattern();
     context.save();
     context.globalAlpha = 0.4;
-    context.drawImage(buffer, 0, 0);
+    context.fillStyle = gridPattern;
+    context.fillRect(0, 0, canvas.width, canvas.height);
     context.restore();
   }
 }
