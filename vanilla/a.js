@@ -509,6 +509,9 @@ document.addEventListener("keydown", function(event) {
       if (modifierMask === 0) { toggleGrid(); break; }
       if ( persistentState.showEditor && modifierMask === SHIFT) { toggleGravity(); break; }
       return;
+    case "KeyL":
+      if (modifierMask === 0) { toggleDarkLight(); break; }
+      return;
     case "KeyV":
       if ( persistentState.showEditor && modifierMask === CTRL) { setPaintBrushTileCode("paste"); break; }
       return;
