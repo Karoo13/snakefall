@@ -83,7 +83,7 @@
           <tr><td><button onpointerdown="event.preventDefault();" id="paintFruitButton" title="F">Fruit</button>
                   <button onpointerdown="event.preventDefault();" id="paintPoisonFruitButton" title="Shift+F">Poison</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="paintPortalButton" title="P">Portal</button></td></tr>
-          <tr><td><button onpointerdown="event.preventDefault();" id="paintSnakeButton" title="N - select again to change color">Snake</button></td></tr>
+          <tr><td><button onpointerdown="event.preventDefault();" id="paintSnakeButton" title="(Shift+) N - select again to change color">Snake</button></td></tr>
           <tr><td><button onpointerdown="event.preventDefault();" id="paintBlockButton" title="B - select again to finish placing">Block</button></td></tr>
           <!-- <tr><td><button onpointerdown="event.preventDefault();" id="paintPlatformButton" title="U - solid to the edges of snakes and blocks">Platform</button></td></tr> -->
           <tr><td><button onpointerdown="event.preventDefault();" id="paintPlatformUButton" title="U - solid to the edges of snakes and blocks">PlatformU</button><br>
@@ -103,7 +103,7 @@
       <tr><td>
         <div id="paradoxDiv" style="background:#f88;"></div>
         Arrows<span id="wasdSpan">/WASD</span> to move
-        <button onpointerdown="event.preventDefault();" id="switchSnakesButton" title="(Shift+)Spacebar, (Shift+)Tab, digits, or click with no edit tool (Esc)">Switch Snakes</button>
+        <button onpointerdown="event.preventDefault();" id="switchSnakesButton" title="(Shift+) Spacebar, (Shift+) Tab, digits, or click with no edit tool (Esc)">Switch Snakes</button>
         <button onpointerdown="event.preventDefault();" id="showGridButton" title="G">Show Grid</button>
         <button onpointerdown="event.preventDefault();" id="touchControlsButton" title="enable an overlay for touch devices">Touch Input</button>
       </td></tr>
@@ -118,7 +118,7 @@
 
     <table>
       <tr><td><button onpointerdown="event.preventDefault();" id="showHideEditor" title="Shift+E">Show Editor</button>
-              <button onpointerdown="event.preventDefault();" id="toggleDarkLight">Light</button></td></tr>
+              <button onpointerdown="event.preventDefault();" id="toggleDarkMode" title="Shift+L">Light</button></td></tr>
       <tr><td>
         <div id="editorDiv" style="display:none;">
           <textarea id="serializationTextarea" rows=30 cols=80></textarea>

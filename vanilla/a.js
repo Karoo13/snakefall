@@ -497,6 +497,7 @@ document.addEventListener("keydown", function(event) {
       return;
     case "KeyN":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(SNAKE); break; }
+      if ( persistentState.showEditor && modifierMask === SHIFT) { setPaintBrushTileCode("prevSnake"); break; }
       return;
     case "KeyB":
       if ( persistentState.showEditor && modifierMask === 0) { setPaintBrushTileCode(BLOCK); break; }
@@ -508,6 +509,9 @@ document.addEventListener("keydown", function(event) {
     case "KeyG":
       if (modifierMask === 0) { toggleGrid(); break; }
       if ( persistentState.showEditor && modifierMask === SHIFT) { toggleGravity(); break; }
+      return;
+    case "KeyL":
+      if (modifierMask === SHIFT) { toggleDarkMode(); break; }
       return;
     case "KeyV":
       if ( persistentState.showEditor && modifierMask === CTRL) { setPaintBrushTileCode("paste"); break; }
@@ -561,8 +565,8 @@ function switchSnakes(delta) {
   }
   activeSnakeId = snakes[0].id;
 }
-document.getElementById("toggleDarkLight").addEventListener("click", function() {
-  toggleDarkLight();
+document.getElementById("toggleDarkMode").addEventListener("click", function() {
+  toggleDarkMode();
 });
 document.getElementById("showGridButton").addEventListener("click", function() {
   toggleGrid();
@@ -595,13 +599,18 @@ function toggleShowEditor() {
   savePersistentState();
   showEditorChanged();
 }
-function toggleDarkLight() {
-  if (document.getElementById("toggleDarkLight").textContent === "Light") {
-    document.documentElement.dataset.theme = "light";
-    document.getElementById("toggleDarkLight").textContent = "Dark";
-  } else {
+function toggleDarkMode() {
+  persistentState.darkMode = !persistentState.darkMode;
+  savePersistentState();
+  setDarkMode();
+}
+function setDarkMode() {
+  if (persistentState.darkMode) {
     document.documentElement.dataset.theme = "dark";
-    document.getElementById("toggleDarkLight").textContent = "Light";
+    document.getElementById("toggleDarkMode").textContent = "Light";
+  } else {
+    document.documentElement.dataset.theme = "light";
+    document.getElementById("toggleDarkMode").textContent = "Dark";
   }
 }
 function toggleGrid() {
@@ -857,11 +866,16 @@ function setPaintBrushTileCode(tileCode) {
     selectionStart = null;
     selectionEnd = null;
   }
-  if (tileCode === SNAKE) {
+  if (tileCode === SNAKE || tileCode === "prevSnake") {
     if (paintBrushTileCode === SNAKE) {
-      // next snake color
-      paintBrushSnakeColorIndex = (paintBrushSnakeColorIndex + 1) % snakeColors.length;
+      if (tileCode === "prevSnake") {
+        paintBrushSnakeColorIndex = (paintBrushSnakeColorIndex - 1 + snakeColors.length) % snakeColors.length;
+      } else {
+        // next snake color
+        paintBrushSnakeColorIndex = (paintBrushSnakeColorIndex + 1) % snakeColors.length;
+      }
     }
+    tileCode = SNAKE;
   } else if (tileCode === BLOCK) {
     const blocks = getBlocks();
     if (paintBrushTileCode === BLOCK && blocks.length > 0) {
@@ -1729,6 +1743,7 @@ function haveCheatcodesBeenUsed() {
 let persistentState = {
   showEditor: false,
   showGrid: true,
+  darkMode: null,
 };
 function savePersistentState() {
   localStorage.snakefall = JSON.stringify(persistentState);
@@ -1741,6 +1756,12 @@ function loadPersistentState() {
   }
   persistentState.showEditor = !!persistentState.showEditor;
   persistentState.showGrid = !!persistentState.showGrid;
+  if (persistentState.darkMode == null) {
+    persistentState.darkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  } else {
+    persistentState.darkMode = !!persistentState.darkMode;
+  }
+  setDarkMode();
   showEditorChanged();
 }
 let isGravityEnabled = true;
