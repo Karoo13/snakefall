@@ -90,6 +90,7 @@ const testLevel_v0 = "3tFRIoTU&5&5?0005*00300024005*001000/b0?7&6&15&23/s3?18/s0
 const testLevel_v0_converted = "HyRr4JK1&5&5?0005*4024005*001000/b0?7&6&15&23/s3?18/s0?1&0&5/s1?2/s4?10/s2?17/b2?9/b3?14/b4?19/b1?4&20/b5?24/f0?8/";
 
 function parseLevel(string) {
+  string = decompressSerialization(string);
   // magic number
   let cursor = 0;
   skipWhitespace();
@@ -116,7 +117,6 @@ function parseLevel(string) {
 
   // map
   let mapData = readRun();
-  mapData = decompressSerialization(mapData);
   if (level.height * level.width !== mapData.length) throw parserError("height, width, and map.length do not jive");
   const upconvertedObjects = [];
   let fruitCount = 0;
